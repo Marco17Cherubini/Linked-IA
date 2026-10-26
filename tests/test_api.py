@@ -217,6 +217,17 @@ def test_interrupted_jobs_fail_on_restart(settings):
     assert store.get_analysis(stuck)["error_code"] == "interrupted"
 
 
+def test_event_list_links_latest_succeeded_analysis(settings):
+    app = make_app(settings)
+    client = app.test_client()
+    good = client.post("/api/events", json=event_payload(), headers=AUTH).get_json()["analysis_id"]
+    store = app.extensions["lia"]["store"]
+    failed = store.create_analysis("new-event", "2.0.0")
+    store.fail_analysis(failed, "provider_unavailable", "FIXTURE")
+    item = client.get("/api/events").get_json()["items"][0]
+    assert item["analysis_id"] == good and item["analysis_status"] == "succeeded"
+
+
 def test_unknown_api_route_is_json(client):
     r = client.get("/api/nope")
     assert r.status_code == 404 and r.get_json()["error"]["code"] == "http_404"

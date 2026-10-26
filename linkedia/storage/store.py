@@ -335,6 +335,7 @@ class Store:
 
     def list_events_with_latest(self, *, q: str | None, category: str | None, page: int,
                                 page_size: int) -> tuple[list[dict], int]:
+        """Eventi con l'analisi da mostrare: l'ultima completata, altrimenti la più recente."""
         where, params = ["1=1"], []
         if q:
             where.append("(title LIKE ? OR description LIKE ? OR tags LIKE ?)")
@@ -350,9 +351,11 @@ class Store:
                            e.origin,
                            (SELECT COUNT(*) FROM sources s WHERE s.event_id = e.id) AS source_count,
                            (SELECT a.id FROM analyses a WHERE a.event_id = e.id
-                              ORDER BY a.created_at DESC, a.rowid DESC LIMIT 1) AS analysis_id,
+                              ORDER BY a.status = 'succeeded' DESC, a.created_at DESC, a.rowid DESC
+                              LIMIT 1) AS analysis_id,
                            (SELECT a.status FROM analyses a WHERE a.event_id = e.id
-                              ORDER BY a.created_at DESC, a.rowid DESC LIMIT 1) AS analysis_status
+                              ORDER BY a.status = 'succeeded' DESC, a.created_at DESC, a.rowid DESC
+                              LIMIT 1) AS analysis_status
                     FROM events e WHERE {clause}
                     ORDER BY e.occurred_on DESC LIMIT ? OFFSET ?""",
                 params + [page_size, (page - 1) * page_size],

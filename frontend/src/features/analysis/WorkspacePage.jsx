@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, ErrorState, Notice, Segmented, Skeleton, TabPanel, Tabs } from '../../components/ui.jsx'
+import { api, getToken } from '../../lib/api.js'
 import { formatDateTime, STATUS_LABEL } from '../../lib/format.js'
 import { useUrlState } from '../../lib/useUrlState.js'
 import MarketChart from './MarketChart.jsx'
@@ -12,6 +13,33 @@ import { useAnalysis } from './useAnalysis.js'
 
 const TABS = ['market', 'precedents', 'outcomes', 'quality', 'summary']
 const WINDOWS = ['10', '20', '60']
+
+function RerunAction({ eventId, canCreate }) {
+  const navigate = useNavigate()
+  const [error, setError] = useState(null)
+  if (!canCreate || !getToken()) {
+    return <p className="small">Un analista autorizzato può avviare di nuovo il calcolo.</p>
+  }
+  return (
+    <>
+      <button
+        type="button"
+        className="button button--secondary"
+        onClick={async () => {
+          try {
+            const res = await api.rerun(eventId)
+            navigate(`/analysis/${res.analysis_id}`)
+          } catch (err) {
+            setError(err)
+          }
+        }}
+      >
+        Ricalcola l'analisi
+      </button>
+      {error && <p className="small">{error.message}</p>}
+    </>
+  )
+}
 
 export default function WorkspacePage({ meta }) {
   const { analysisId } = useParams()
@@ -83,6 +111,7 @@ export default function WorkspacePage({ meta }) {
         <Notice tone="error" title="Analisi non riuscita">
           <p>{data.error?.message}</p>
           <p className="small muted">Terminata il {formatDateTime(data.finished_at)}.</p>
+          <RerunAction eventId={data.event.id} canCreate={meta.features.create} />
         </Notice>
       )}
 

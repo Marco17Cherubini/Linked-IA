@@ -14,7 +14,10 @@ import { DataTable, EmptyState, InfoTip, Segmented } from '../../components/ui.j
 import { formatDate, formatNumber, formatPct } from '../../lib/format.js'
 import { ANIMATION, AXIS_PROPS, GRID_PROPS } from './chartTheme.js'
 
-function ChartTooltip({ active, payload, scale, currency }) {
+// Variazione calcolata dalle chiusure (come i rendimenti del backend), non dalla base 100 arrotondata.
+const changeFromBase = (p, baseClose) => (p.close / baseClose - 1) * 100
+
+function ChartTooltip({ active, payload, scale, currency, baseClose }) {
   if (!active || !payload?.length) return null
   const p = payload[0].payload
   return (
@@ -28,7 +31,7 @@ function ChartTooltip({ active, payload, scale, currency }) {
           ? `${formatNumber(p.index100, 2)} (base 100)`
           : `${formatNumber(p.close, 2)} ${currency}`}
       </div>
-      {p.s !== 0 && <div className="muted">{formatPct(p.index100 - 100)} dalla base</div>}
+      {p.s !== 0 && <div className="muted">{formatPct(changeFromBase(p, baseClose))} dalla base</div>}
     </div>
   )
 }
@@ -56,7 +59,7 @@ export default function MarketChart({ data, market, view, windowSize }) {
     ? `${market.name}: ${points.length} sedute fino alla seduta base del ${baseDate} (chiusura ${formatNumber(data.base.close)} ${market.currency}). Gli esiti successivi sono nascosti nella vista al cutoff.`
     : `${market.name}: chiusura base ${formatNumber(data.base.close)} ${market.currency} il ${baseDate}. ` +
       (maxS > 0
-        ? `Dopo ${maxS} sedute (${formatDate(last.date)}) l'indice è a ${formatNumber(last.index100)} in base 100 (${formatPct(last.index100 - 100)}).`
+        ? `Dopo ${maxS} sedute (${formatDate(last.date)}) l'indice è a ${formatNumber(last.index100)} in base 100 (${formatPct(changeFromBase(last, data.base.close))}).`
         : 'Non ci sono ancora sedute successive all’evento.')
 
   return (
@@ -114,7 +117,7 @@ export default function MarketChart({ data, market, view, windowSize }) {
               strokeDasharray="5 4"
               label={{ value: 'Evento', position: 'insideTopLeft', fill: 'var(--event)', fontSize: 12, fontWeight: 600 }}
             />
-            <Tooltip content={<ChartTooltip scale={scale} currency={market.currency} />} cursor={{ stroke: 'var(--border-strong)' }} />
+            <Tooltip content={<ChartTooltip scale={scale} currency={market.currency} baseClose={data.base.close} />} cursor={{ stroke: 'var(--border-strong)' }} />
             <Line type="linear" dataKey={key} stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} {...ANIMATION} />
           </LineChart>
         </ResponsiveContainer>
