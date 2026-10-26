@@ -1,12 +1,12 @@
 # LiA — Linked Intelligent Analyst
 
-**An interactive tool that shows how stock markets moved around a documented event — and how they moved after similar events in the past.**
+**Less time and less guesswork when a geopolitical shock hits: LiA shows how the markets moved around a documented event, and after similar events in the past.**
 
 [![CI](https://github.com/Marco17Cherubini/Linked-IA/actions/workflows/ci.yml/badge.svg)](https://github.com/Marco17Cherubini/Linked-IA/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-%3E%3D3.11-3776AB)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933)
 
-> The user interface is in Italian: LiA started as an academic project at the University of Eastern Piedmont (UNIUPO).
+> The user interface is in Italian: LiA was developed for a thesis at the University of Eastern Piedmont (UNIUPO).
 
 ---
 
@@ -14,25 +14,20 @@
 
 ### Context
 
-LiA was born from a simple question: **when something big happens — a war, a central-bank decision, a bank failure, an election — what do the markets actually do, and has it happened before?** The answer is usually scattered across news articles, price charts and memory. LiA puts the event, the prices and the historical precedents in one place.
+Financial advisors face a time gap. Following geopolitics continuously — wars, sanctions, central-bank moves, attacks — takes hours that the job does not leave, and reading a shock under pressure exposes the decision to bias and error. Yet the link between geopolitics and markets is well documented: the **International Monetary Fund** finds that stock prices fall noticeably during major geopolitical risk events — about **1 percentage point a month on average**, about **2.5 points in emerging markets**, and more for military conflicts — and that these risks are hard to price because they are rare and their duration is uncertain ([IMF, 2025](https://www.imf.org/en/blogs/articles/2025/04/14/how-rising-geopolitical-risks-weigh-on-asset-prices)).
 
-### The problem
+LiA was born as the project of a thesis at the University of Eastern Piedmont (UNIUPO) to close that gap: take the IMF's reading of geopolitical shocks and turn it into a tool that shows, event by event, what the markets actually did.
 
-The first prototype tried to answer with a chain of language models: it scraped news, asked an LLM to write a free-text "link" between the article and the prices, and compared those texts by shared words. A review of the code showed that the results could not be trusted:
+### The main point
 
-- some indicators used **prices from after the event** as if they were known at the time;
-- "historical patterns" were searched in the whole archive, **including later events and the article itself**;
-- provider errors were silently turned into "no news" or zero values, and some missing prices were **asked to an LLM**;
-- every analysis called the paid model several times, and the API key was written in the source code.
+**Reduce the uncertainty of the decision and the time it takes**, by giving the advisor the market facts of a shock — and its historical precedents — in one screen instead of hours of reading.
 
-### How we solved it
+LiA is a web application with a Python back end and a React front end:
 
-We rebuilt LiA around data that can be checked:
-
-- **an event is structured data** — date, time with time zone and precision, category, tags and sources — not a scraped paragraph;
-- **for each market LiA finds the last close before the event** and measures everything from there, keeping what was known at that moment separate from what happened next;
-- **precedents are chosen with explicit rules**, and only if their outcome was already observable on the event date;
-- **AI is optional**: a written summary is generated only on explicit request and only from the computed data.
+- a **catalogue of documented events** — date, time with time zone, category, tags and sources — that analysts can extend;
+- **daily prices of five indices** (S&P 500, Nasdaq Composite, DAX 40, FTSE 100, Nikkei 225) downloaded for free from Yahoo Finance;
+- a **deterministic engine** that finds, for each market, the last close before the event, measures what happened after 1, 5 and 20 sessions and selects comparable precedents whose outcome was already known on that date;
+- an **optional AI summary**: with a DeepSeek API key, an authorised analyst can ask for a written reading of the computed data, never generated automatically.
 
 Exploring a case takes three steps: open an event, look at the market around it, compare it with its precedents.
 
@@ -40,15 +35,29 @@ Exploring a case takes three steps: open an event, look at the market around it,
 | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | ![Home page with the demo case and its S&P 500 chart in base 100](docs/images/01-home.jpg) | ![FTSE 100 around the invasion of Ukraine: base session, event marker, indicators at cutoff](docs/images/02-workspace-mercato.jpg) | ![DAX: the event against five precedents, one highlighted](docs/images/03-precedenti.jpg) |
 
-### Results
+### Results & case studies
 
-- **34 real events** from 2001 to 2025 — wars, terror attacks, financial crises, central-bank decisions, elections, tariffs, pandemics, natural disasters — each with verified sources;
-- **5 indices** (S&P 500, Nasdaq Composite, DAX 40, FTSE 100, Nikkei 225), about **6,100–6,250 trading sessions each**;
-- computed values checked against known closes: the S&P 500 closed at **4,225.50 on 23 February 2022** and gained **+1.50%** the next day, while the DAX fell **−3.96%**; before 11 September 2001 the S&P 500 closed at **1,092.54** and the market stayed shut until the 17th — LiA flags the closure.
+The thesis tested LiA on three shocks of different nature. All figures below are produced by the current version of LiA and match the historical closes.
 
-| Outcomes of the precedents                                                                                  | Data quality and sources                                                                     |
-| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| ![Dot plot of the precedents' 20-session returns with median and the analysed event](docs/images/04-esiti-campione-scuro.jpg) | ![Quality panel: sources, price coverage, usable cases, missing data, warnings](docs/images/05-qualita-fonti-scuro.jpg) |
+| Case | Base session | First session after the event | After 20 sessions | Precedents in the catalogue |
+| --- | --- | --- | --- | --- |
+| **Russia invades Ukraine** — 24 Feb 2022, geopolitical | 23 Feb 2022 | DAX **−3.96%**, FTSE 100 **−3.88%**, Nikkei **−1.81%**; S&P 500 **+1.50%** | DAX −2.38%, S&P 500 +5.46% | 5 |
+| **Lehman Brothers files for bankruptcy** — 15 Sep 2008, financial | 12 Sep 2008 | S&P 500 **−4.71%**, FTSE 100 −3.92%, DAX −2.74%, Nikkei −4.95% | S&P 500 **−28.16%**, every index between −22% and −28% | 0 |
+| **11 September attacks** — 11 Sep 2001, terrorism | 10 Sep 2001 | DAX **−8.49%** the same afternoon; S&P 500 **−4.92%** at the reopening on 17 Sep | S&P 500 −11.60% after 5 sessions | 0 |
+
+**Ukraine — a geopolitical shock read correctly.** The blow hit hardest the markets closest to the conflict: European indices lost about 4% in the first session while Wall Street recovered within the day. The pattern is the one the IMF describes for military conflicts, and LiA can place it next to five earlier geopolitical events (Crimea 2014, Iraq 2003, Soleimani 2020, the 2017 North Korean test, the 2020 oil price war).
+
+**Lehman — a financial shock recognised as different.** The first-session falls already exceed the range the IMF reports for geopolitical shocks, and after 20 sessions all five indices are down 22–28%: the profile of a systemic banking crisis, the kind of systemic banking crisis catalogued in the IMF database by [Laeven & Valencia (2012)](https://www.imf.org/en/Publications/WP/Issues/2016/12/31/Systemic-Banking-Crises-Database-An-Update-26015). The thesis used exactly this contrast to show that LiA separates an external geopolitical shock from an internal financial one.
+
+**11 September — where the model meets a black swan.** US markets stayed closed until 17 September, the longest closure since 1933. The thesis prototype read only the data of the day itself and **failed**: it saw contained moves where there was a crash. The current version anchors the measure on the last close before the attack and reports the −4.92% at the reopening, flagging the closure. But it still has **no precedent to compare it with**: the statistics stay empty, because nothing like it had happened before. However well LiA reworks the data, an event without history remains outside what it can interpret — that is the limit the case was chosen to expose.
+
+| Lehman Brothers: the 20-session slide | 11 September: market closure and no precedents |
+| --- | --- |
+| ![S&P 500 around the Lehman bankruptcy: −4.71% in the first session, −28.16% after 20](docs/images/08-case-lehman.jpg) | ![Quality panel of 11 September: market closed for six days, no usable precedents](docs/images/09-case-sept11.jpg) |
+
+### From the thesis prototype to LiA 2.0
+
+The prototype described in the thesis scraped news, asked a language model to write a link between each article and the prices, and compared those texts word by word. A review showed that some indicators used prices from after the event, that "patterns" were searched among later events too, and that provider errors silently became empty results. LiA 2.0 keeps the idea and the case studies but rebuilds the method on checkable data: structured events, an explicit time convention, precedents with no hindsight and statistics that declare their sample size. The original pipeline is documented in [docs/history/](docs/history/).
 
 ---
 
