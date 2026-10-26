@@ -67,6 +67,14 @@ describe('KeyFigures', () => {
     expect(screen.getByText('Nascosto')).toBeInTheDocument()
   })
 
+  it("mostra per prima la data dell'evento, non quella della seduta base", () => {
+    const data = { ...fixture(5), event_time: { occurred_on: '2020-01-11' } }
+    wrap(<KeyFigures data={data} view="retrospective" horizon="5" market={market} />)
+    expect(screen.getByText('Evento')).toBeInTheDocument()
+    expect(screen.getByText('11 gen 2020')).toBeInTheDocument()
+    expect(screen.getByText(/Riferimento: chiusura del 10 gen 2020/)).toBeInTheDocument()
+  })
+
   it('orizzonte non ancora osservabile', () => {
     wrap(<KeyFigures data={fixture(5)} view="retrospective" horizon="20" market={market} />)
     expect(screen.getByText('Non ancora osservabile')).toBeInTheDocument()

@@ -39,7 +39,9 @@ Exploring a case takes three steps: open an event, look at the market around it,
 
 The thesis tested LiA on three shocks of different nature. All figures below are produced by the current version of LiA and match the historical closes.
 
-| Case | Base session | First session after the event | After 20 sessions | Precedents in the catalogue |
+> **How the dates line up.** LiA measures every move from **the last close before the event**, so each case has two dates: the event itself and the reference close of the previous trading session (for the invasion of Ukraine: event on 24 February 2022, reference close on 23 February). The first move shown — "first session after the event" — is the market's reaction **on the event day** — or on the first day the market traded after it — compared with that close. In the charts the amber dashed line marks the event: what is on its left was known before, what is on its right is the reaction. After 11 September, for example, Wall Street's first session after the event is the reopening on 17 September.
+
+| Case (event date) | Reference close (last before the event) | First session after the event | After 20 sessions | Precedents in the catalogue |
 | --- | --- | --- | --- | --- |
 | **Russia invades Ukraine** — 24 Feb 2022, geopolitical | 23 Feb 2022 | DAX **−3.96%**, FTSE 100 **−3.88%**, Nikkei **−1.81%**; S&P 500 **+1.50%** | DAX −2.38%, S&P 500 +5.46% | 5 |
 | **Lehman Brothers files for bankruptcy** — 15 Sep 2008, financial | 12 Sep 2008 | S&P 500 **−4.71%**, FTSE 100 −3.92%, DAX −2.74%, Nikkei −4.95% | S&P 500 **−28.16%**, every index between −22% and −28% | 0 |

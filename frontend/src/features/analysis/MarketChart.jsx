@@ -81,10 +81,11 @@ export default function MarketChart({ data, market, view, windowSize }) {
         />
       </div>
       <p className="chart-note">
-        {scale === 'index100'
-          ? `Base 100 = chiusura del ${baseDate} (seduta base, s = 0).`
-          : `Livello dell'indice in ${market.currency}.`}{' '}
-        La linea tratteggiata ambra separa la seduta base dalla prima seduta che può riflettere l'evento.
+        <strong>Come leggere il grafico:</strong> ogni movimento è misurato dalla chiusura del {baseDate}, l'ultima
+        avvenuta prima dell'evento del {formatDate(data.event_time?.occurred_on ?? data.base.date)}. A sinistra della
+        linea ambra c'è ciò che si sapeva prima; a destra, la reazione del mercato a partire dalla prima seduta dopo
+        l'evento{data.first_reaction && !asOf ? ` (${formatDate(data.first_reaction.date)})` : ''}.{' '}
+        {scale === 'index100' ? `Base 100 = chiusura del ${baseDate}.` : `Livello dell'indice in ${market.currency}.`}
       </p>
       <div className="chart-box" style={{ height: 340 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -109,13 +110,13 @@ export default function MarketChart({ data, market, view, windowSize }) {
               {...AXIS_PROPS}
             />
             {scale === 'index100' && <ReferenceLine y={100} stroke="var(--border-strong)" strokeDasharray="2 4" />}
-            <ReferenceLine x={0} stroke="var(--text-3)" label={{ value: 'Base', position: 'top', fill: 'var(--text-2)', fontSize: 12 }} />
+            <ReferenceLine x={0} stroke="var(--text-3)" label={{ value: 'Ultima chiusura prima', position: 'top', fill: 'var(--text-2)', fontSize: 12 }} />
             <ReferenceLine
               x={0.5}
               stroke="var(--event)"
               strokeWidth={2}
               strokeDasharray="5 4"
-              label={{ value: 'Evento', position: 'insideTopLeft', fill: 'var(--event)', fontSize: 12, fontWeight: 600 }}
+              label={{ value: `Evento · ${formatDate(data.event_time?.occurred_on ?? data.base.date, 'short')}`, position: 'insideTopLeft', fill: 'var(--event)', fontSize: 12, fontWeight: 600 }}
             />
             <Tooltip content={<ChartTooltip scale={scale} currency={market.currency} baseClose={data.base.close} />} cursor={{ stroke: 'var(--border-strong)' }} />
             <Line type="linear" dataKey={key} stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} {...ANIMATION} />
