@@ -80,3 +80,10 @@ docs/                architettura, decisioni, piano, documenti storici
 - Le fonti del catalogo sono voci di Wikipedia e comunicati ufficiali, non notizie originali dell'epoca.
 
 Progetto accademico — Università del Piemonte Orientale. La versione precedente della pipeline è documentata in [docs/history/](docs/history/).
+
+## Schermate
+
+| | |
+|---|---|
+| ![Home](docs/images/01-home.jpg) | ![Mercato](docs/images/02-workspace-mercato.jpg) |
+| ![Precedenti](docs/images/03-precedenti.jpg) | ![Esiti](docs/images/04-esiti-campione-scuro.jpg) |
