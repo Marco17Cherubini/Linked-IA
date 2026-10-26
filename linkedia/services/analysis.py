@@ -1,0 +1,171 @@
+"""Creazione ed esecuzione delle analisi (stesso codice per API e CLI)."""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from datetime import date, timedelta
+from importlib import resources
+
+from .. import METHOD_VERSION
+from ..domain.analysis import build_market_analysis
+from ..domain.events import Event, parse_event
+from ..domain.markets import MARKETS
+from ..errors import Conflict, InvalidInput, LiaError, ProviderUnavailable
+from ..providers.market_data import MarketDataProvider
+from ..storage.store import Store, utc_now
+
+log = logging.getLogger(__name__)
+
+# Margini in giorni di calendario per coprire 60 sedute prima e dopo ogni evento.
+PRICE_MARGIN_BEFORE = timedelta(days=150)
+PRICE_MARGIN_AFTER = timedelta(days=120)
+FETCH_COOLDOWN_SECONDS = 600
+
+
+def load_catalogue() -> list[Event]:
+    """Catalogo curato distribuito con il package (`linkedia/data/events.json`)."""
+    raw = json.loads(resources.files("linkedia.data").joinpath("events.json").read_text("utf-8"))
+    events = []
+    for item in raw["events"]:
+        event, errors = parse_event(item, origin="curated")
+        if errors:
+            raise InvalidInput(f"Catalogo non valido ({item.get('id')}): {'; '.join(errors)}")
+        events.append(event)
+    return events
+
+
+class AnalysisService:
+    def __init__(self, store: Store, market_data: MarketDataProvider, runner, *, today=date.today):
+        self.store = store
+        self.market_data = market_data
+        self.runner = runner
+        self._today = today
+        self._failed_fetches: dict[str, float] = {}
+
+    # --- Eventi ---------------------------------------------------------------------------
+
+    def import_catalogue(self) -> int:
+        events = load_catalogue()
+        for event in events:
+            self.store.upsert_event(event)
+        return len(events)
+
+    def create_event(self, payload: dict) -> tuple[Event, str]:
+        event, errors = parse_event(payload, origin="user")
+        if errors:
+            raise InvalidInput("Dati dell'evento non validi: " + "; ".join(errors))
+        if event.occurred_on > self._today():
+            raise InvalidInput("La data dell'evento non può essere futura")
+        if self.store.event_exists(event.id):
+            raise Conflict("Esiste già un evento con questo identificativo")
+        self.store.upsert_event(event)
+        return event, self.request_analysis(event.id)
+
+    # --- Analisi --------------------------------------------------------------------------
+
+    def request_analysis(self, event_id: str) -> str:
+        self.store.get_event(event_id)  # NotFound se non esiste
+        latest = self.store.latest_analysis_for_event(event_id)
+        if latest and latest["status"] in ("queued", "running"):
+            return latest["id"]
+        analysis_id = self.store.create_analysis(event_id, METHOD_VERSION)
+        self.runner.submit(self.run_analysis, analysis_id)
+        return analysis_id
+
+    def _price_range(self, events: list[Event]) -> tuple[date, date]:
+        first = min(e.occurred_on for e in events) - PRICE_MARGIN_BEFORE
+        last = min(self._today(), max(e.occurred_on for e in events) + PRICE_MARGIN_AFTER)
+        return first, last
+
+    def ensure_prices(self, market_id: str, start: date, end: date) -> None:
+        """Scarica i prezzi solo se l'archivio non copre l'intervallo o non è aggiornato a oggi."""
+        sync = self.store.price_sync(market_id)
+        if sync:
+            covered = sync["first_date"] <= start.isoformat()
+            fresh = sync["last_date"] >= end.isoformat() or sync["fetched_at"][:10] == utc_now()[:10]
+            if covered and fresh:
+                return
+        failed_at = self._failed_fetches.get(market_id)
+        if failed_at is not None and time.monotonic() - failed_at < FETCH_COOLDOWN_SECONDS:
+            # Dopo un guasto non si ripete la richiesta a ogni analisi: si evita di
+            # sovraccaricare il provider (e di farsi limitare con HTTP 429).
+            raise ProviderUnavailable(
+                f"Prezzi di {MARKETS[market_id].name} temporaneamente non disponibili"
+            )
+        try:
+            bars = self.market_data.daily_bars(MARKETS[market_id], start, end)
+        except ProviderUnavailable:
+            self._failed_fetches[market_id] = time.monotonic()
+            raise
+        self._failed_fetches.pop(market_id, None)
+        if not bars:
+            raise ProviderUnavailable(f"Nessun prezzo restituito per {MARKETS[market_id].name}")
+        self.store.save_prices(market_id, bars, provider=self.market_data.name)
+        log.info("Prezzi %s aggiornati: %s sedute", market_id, len(bars))
+
+    def sync_all_prices(self) -> dict[str, str]:
+        """Aggiorna i prezzi di tutti i mercati per l'intero catalogo. Restituisce gli errori."""
+        start, end = self._price_range(self.store.all_events())
+        errors = {}
+        for market_id in MARKETS:
+            try:
+                self.ensure_prices(market_id, start, end)
+            except ProviderUnavailable as exc:
+                errors[market_id] = exc.message
+        return errors
+
+    def run_analysis(self, analysis_id: str) -> None:
+        analysis = self.store.get_analysis(analysis_id)
+        self.store.mark_analysis_running(analysis_id)
+        try:
+            result = self._compute(analysis["event_id"])
+        except LiaError as exc:
+            self.store.fail_analysis(analysis_id, exc.code, exc.message)
+            return
+        except Exception:
+            log.exception("Analisi %s fallita", analysis_id)
+            self.store.fail_analysis(analysis_id, "internal_error",
+                                     "Errore interno durante il calcolo dell'analisi.")
+            return
+        self.store.finish_analysis(analysis_id, result)
+
+    def _compute(self, event_id: str) -> dict:
+        event = self.store.get_event(event_id)
+        catalogue = self.store.all_events()
+        start, end = self._price_range(catalogue + [event])
+        markets, market_errors, providers = {}, {}, {}
+        for market_id, market in MARKETS.items():
+            try:
+                self.ensure_prices(market_id, start, end)
+            except ProviderUnavailable as exc:
+                # Il guasto resta visibile: il mercato non viene mostrato come "senza movimento".
+                market_errors[market_id] = {"code": exc.code, "message": exc.message}
+                if not self.store.price_sync(market_id):
+                    continue
+            bars = self.store.get_prices(market_id)
+            if not bars:
+                market_errors.setdefault(market_id, {"code": "insufficient_data",
+                                                     "message": "Nessun prezzo in archivio."})
+                continue
+            markets[market_id] = build_market_analysis(
+                event, market, bars, catalogue
+            )
+            providers[market_id] = self.store.price_sync(market_id)
+        if not markets:
+            raise ProviderUnavailable(
+                "Dati di mercato non disponibili per nessun indice: riprovare più tardi."
+            )
+        return {
+            "method_version": METHOD_VERSION,
+            "computed_at": utc_now(),
+            "event": event.to_dict(),
+            "markets": markets,
+            "market_errors": market_errors,
+            "price_sources": {
+                m: {"provider": p["provider"], "fetched_at": p["fetched_at"],
+                    "first_date": p["first_date"], "last_date": p["last_date"]}
+                for m, p in providers.items()
+            },
+        }
