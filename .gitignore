@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database files
+database/
+*.xlsx
+*.db
+*.sqlite
+
+# API Keys & Secrets
+.env
+*.key
+sk-proj-*.txt
+config.ini
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+
+# Frontend
+node_modules/
+frontend*/build/
+frontend*/dist/
+
+# Cache e dati locali (ricostruibili, non versionati)
+ohlcv_cache/
+cache_embeddings/
+cache_turbo/
+cache_perplexity_finance/
+instance/
+*.pkl

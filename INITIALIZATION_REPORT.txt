@@ -1,0 +1,213 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                                                                          ║
+║            LinkedIA - LINKED INTELLIGENT ANALYST                         ║
+║            Initialization Complete ✓                                     ║
+║                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+📅 Data: 21 Ottobre 2025
+🔧 Sistema: Windows + PowerShell
+🐍 Python: 3.13.3
+📍 Path: c:\Users\marco\OneDrive\Desktop\Marco\UNIUPO\Laurea\LinkedIA
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ FILE CREATI DURANTE L'INIZIALIZZAZIONE
+
+📄 requirements.txt         - Elenco dipendenze Python
+📄 README.md                - Documentazione completa del progetto
+📄 INSTALLATION.md          - Guida installazione passo-passo
+📄 PROJECT_STRUCTURE.md     - Architettura e flusso del sistema
+📄 .gitignore               - Esclusione file sensibili da Git
+📄 .env.example             - Template variabili d'ambiente
+📄 setup.py                 - Wizard configurazione interattivo
+📄 start.py                 - Script avvio con controlli automatici
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ DIPENDENZE VERIFICATE
+
+Tutte le dipendenze principali sono GIÀ INSTALLATE:
+
+✓ pandas (2.2.3)                    - Data manipulation
+✓ numpy (2.2.5)                     - Numerical computing
+✓ yfinance (0.2.65)                 - Market data
+✓ pandas_market_calendars (5.1.1)  - Trading calendars
+✓ scikit-learn (1.7.1)              - Machine learning
+✓ openai (0.28.0)                   - GPT integration
+✓ feedparser (6.0.11)               - RSS feeds
+✓ beautifulsoup4 (4.13.4)           - Web scraping
+✓ Flask (3.1.2)                     - Web server
+✓ openpyxl (3.1.5)                  - Excel I/O
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚀 PROSSIMI PASSI PER INIZIARE
+
+1. CONFIGURA API KEY OPENAI
+   ────────────────────────────────────────────────────────────────────
+   
+   Opzione A - Setup Automatico (Raccomandato):
+   
+   PS> python setup.py
+   
+   Opzione B - Manuale:
+   
+   PS> copy .env.example .env
+   Poi modifica .env con la tua chiave OpenAI
+   
+
+2. IMPORTANTE: RIMUOVI CHIAVI HARDCODED
+   ────────────────────────────────────────────────────────────────────
+   
+   Nei file: archive_manager.py, analizer2.py, LiA.py
+   
+   PRIMA:
+   openai.api_key = ("sk-proj-DGIPN88y6aFwNuQqh83_kUqCGFG...")
+   
+   DOPO:
+   import os
+   from dotenv import load_dotenv
+   load_dotenv()
+   openai.api_key = os.getenv('OPENAI_API_KEY')
+   
+   Installa python-dotenv:
+   PS> pip install python-dotenv
+
+
+3. AVVIA IL SISTEMA
+   ────────────────────────────────────────────────────────────────────
+   
+   PS> python start.py
+   
+   Oppure direttamente:
+   
+   PS> python main.py
+   > Inserisci la data (YYYY-MM-DD): 2022-02-24
+
+
+4. TESTA CON DATE STORICHE IMPORTANTI
+   ────────────────────────────────────────────────────────────────────
+   
+   • 2001-09-11  → Attacchi Twin Towers
+   • 2008-09-15  → Fallimento Lehman Brothers
+   • 2020-03-16  → Crollo COVID-19
+   • 2022-02-24  → Invasione russa Ucraina
+   • 2023-10-07  → Attacco Hamas a Israele
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 ARCHITETTURA DEL SISTEMA
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  INPUT: Data (YYYY-MM-DD)                                           │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASE 1: DATA COLLECTION                                            │
+│  ├─ fetcher.py          → Cerca notizie in RSS feeds               │
+│  ├─ archive_manager.py  → Se vuoto, usa GPT per eventi storici     │
+│  └─ scraper.py          → Scarica dettagli articoli                │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASE 2: MARKET DATA                                                │
+│  ├─ date_filter.py      → Identifica trading days                  │
+│  ├─ yfinance            → Scarica OHLCV per 5 indici               │
+│  └─ close_prev.py       → Calcola chiusure precedenti              │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASE 3: TECHNICAL INDICATORS                                       │
+│  ├─ core_addons.py      → 7 indicatori base (gap, ATR, RV, etc.)   │
+│  └─ extra_addons.py     → 7 indicatori avanzati (zscore, momentum) │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASE 4: INCREMENTAL ANALYSIS                                       │
+│  └─ analizer2.py        → Collega notizie ↔ prezzi (report_nesso)  │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASE 5: DATABASE STORAGE                                           │
+│  └─ db_manager.py       → Salva in database/database.xlsx          │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  FASE 6: FINAL ANALYSIS (LiA)                                       │
+│  └─ LiA.py              → TF-IDF + Cosine Similarity + GPT          │
+│                         → Trova pattern storici simili              │
+│                         → Genera sentenza predittiva                │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  OUTPUT: Report finale con previsioni                               │
+└─────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAZIONE DISPONIBILE
+
+📖 README.md               → Panoramica completa, features, esempi
+📖 INSTALLATION.md         → Guida setup dettagliata + troubleshooting
+📖 PROJECT_STRUCTURE.md    → Architettura moduli + schema database
+📖 THIS FILE              → Status inizializzazione + quick start
+
+═══════════════════════════════════════════════════════════════════════════
+
+⚠️  AVVISI IMPORTANTI
+
+🔴 SICUREZZA:
+   • Le chiavi OpenAI sono HARDCODED in 3 file Python
+   • PRIORITÀ: Spostarle in variabili d'ambiente (.env)
+   • File sk-proj-*.txt contiene la chiave → Eliminarlo dopo setup
+
+🟡 OTTIMIZZAZIONI FUTURE:
+   • Migrare da Excel a database relazionale (PostgreSQL)
+   • Integrare feed premium (Bloomberg, Factiva)
+   • Implementare caching per ridurre API calls
+   • Aggiungere backtesting e validazione statistica
+
+🟢 FUNZIONALE:
+   • Sistema pronto all'uso dopo setup API key
+   • Tutte le dipendenze presenti
+   • Database auto-creato al primo avvio
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎯 QUICK START COMMAND
+
+PS> python start.py
+
+Questo eseguirà:
+1. Controllo versione Python
+2. Verifica file .env
+3. Check database setup
+4. Warning su API keys
+5. Avvio automatico di main.py
+
+═══════════════════════════════════════════════════════════════════════════
+
+📧 SUPPORTO
+
+Per assistenza consulta:
+• INSTALLATION.md (troubleshooting dettagliato)
+• README.md (FAQ e best practices)
+• Log nella console durante esecuzione
+• Output in database/database.xlsx
+
+═══════════════════════════════════════════════════════════════════════════
+
+✨ LinkedIA è pronto! Buona analisi geopolitico-finanziaria! 🚀📊
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║  © 2025 - Università del Piemonte Orientale (UNIUPO)                    ║
+║  Progetto di Tesi - Marco                                               ║
+╚══════════════════════════════════════════════════════════════════════════╝
