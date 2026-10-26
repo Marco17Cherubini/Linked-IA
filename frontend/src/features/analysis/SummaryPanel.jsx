@@ -1,0 +1,105 @@
+import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Notice } from '../../components/ui.jsx'
+import { api, getToken } from '../../lib/api.js'
+import { formatDateTime } from '../../lib/format.js'
+
+export default function SummaryPanel({ analysisId, summary, aiEnabled, onRequested }) {
+  const dialogRef = useRef(null)
+  const [error, setError] = useState(null)
+  const [sending, setSending] = useState(false)
+  const hasToken = Boolean(getToken())
+  const pending = summary && ['queued', 'running'].includes(summary.status)
+
+  const confirm = async () => {
+    setSending(true)
+    setError(null)
+    try {
+      await api.requestSummary(analysisId, { confirm_cost: true, regenerate: summary?.status === 'succeeded' })
+      dialogRef.current?.close()
+      onRequested()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="summary">
+      <Notice tone="info" title="Che cos'è questa sezione">
+        Una sintesi testuale scritta da un modello linguistico a partire dai soli dati calcolati in questa analisi. Può
+        contenere errori: i numeri di riferimento sono quelli dei grafici e delle tabelle.
+      </Notice>
+
+      {summary?.status === 'succeeded' && summary.content && (
+        <article className="panel summary__content" aria-labelledby="summary-title">
+          <p className="eyebrow">Testo generato da IA · {summary.model} · {formatDateTime(summary.finished_at)}</p>
+          <h2 id="summary-title" className="summary__headline">
+            {summary.content.headline}
+          </h2>
+          <h3>Che cosa mostrano i dati</h3>
+          <ul>
+            {summary.content.observations.map((o) => (
+              <li key={o}>{o}</li>
+            ))}
+          </ul>
+          <h3>Interpretazione</h3>
+          <p>{summary.content.interpretation}</p>
+          <h3>Limiti</h3>
+          <ul>
+            {summary.content.limitations.map((o) => (
+              <li key={o}>{o}</li>
+            ))}
+          </ul>
+        </article>
+      )}
+
+      {pending && (
+        <p role="status" className="job-status">
+          <span className="spinner" aria-hidden="true" /> Sintesi in preparazione… La pagina si aggiorna da sola.
+        </p>
+      )}
+
+      {summary?.status === 'failed' && (
+        <Notice tone="error" title="Sintesi non riuscita">
+          {summary.error_message}
+        </Notice>
+      )}
+
+      {!summary && <p className="muted">Nessuna sintesi IA è stata generata per questa analisi.</p>}
+
+      {!pending &&
+        (aiEnabled && hasToken ? (
+          <>
+            <button type="button" className="button" onClick={() => dialogRef.current?.showModal()}>
+              {summary?.status === 'succeeded' ? 'Rigenera la sintesi IA' : 'Genera la sintesi IA'}
+            </button>
+            <dialog ref={dialogRef} className="dialog" aria-labelledby="confirm-title">
+              <h2 id="confirm-title">Confermi la generazione?</h2>
+              <p>
+                La sintesi usa un servizio esterno a pagamento (una richiesta al modello). Il risultato viene salvato e
+                riutilizzato: consultare l'analisi non genera altri costi.
+              </p>
+              {error && <Notice tone="error">{error.message}</Notice>}
+              <div className="dialog__actions">
+                <button type="button" className="button button--secondary" onClick={() => dialogRef.current?.close()}>
+                  Annulla
+                </button>
+                <button type="button" className="button" onClick={confirm} disabled={sending}>
+                  {sending ? 'Invio…' : 'Conferma e genera'}
+                </button>
+              </div>
+            </dialog>
+          </>
+        ) : (
+          <p className="small muted">
+            {aiEnabled
+              ? 'La generazione è riservata agli analisti autorizzati: inserisci il token nella pagina '
+              : 'La generazione delle sintesi non è attiva su questo server. '}
+            {aiEnabled && <Link to="/new">Nuova analisi</Link>}
+          </p>
+        ))}
+    </div>
+  )
+}

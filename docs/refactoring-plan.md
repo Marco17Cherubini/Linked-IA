@@ -98,7 +98,7 @@ Il prompt della Fase 2 chiede una nuova versione completa (backend, metodo, fron
 | D7 | `yfinance` pesante, scraping non documentato; Stooq protetto da verifica anti-bot | Provider `YahooChartProvider` con `requests` sull'endpoint chart (timeout, retry, validazione) | Endpoint non ufficiale: dipendenza esterna dichiarata, sostituibile via interfaccia. |
 | D8 | IA chiamata a ogni richiesta | Sintesi IA **solo su richiesta esplicita**, con token di analista e chiave configurata; risultato strutturato JSON validato e persistito | Il caso dimostrativo può non avere sintesi: lo stato è mostrato. |
 | D9 | Due frontend | **React** (indicato dal prompt). Vue rimosso. | — |
-| D10 | Libreria grafica | **Recharts 2.15** (vedi §5) | SVG: oltre ~10k punti peggiora, ma i dati sono < 300 punti per serie. |
+| D10 | Libreria grafica | **Recharts 3.10** (vedi §5) | SVG: oltre ~10k punti peggiora, ma i dati sono < 300 punti per serie. |
 | D11 | Job | Esecutore in-process a un thread + stato in SQLite; i job interrotti dal riavvio vengono marcati come falliti | Nessuna coda esterna (YAGNI). Un solo processo applicativo in produzione. |
 | D12 | Dipendenze | Backend: flask, requests, python-dotenv (+ gunicorn per il deploy). Niente pandas/numpy: i calcoli usano `statistics` | Codice numerico esplicito e testato. |
 
@@ -119,7 +119,7 @@ Il prompt della Fase 2 chiede una nuova versione completa (backend, metodo, fron
 | Plotly | ottime | ricche | limitata | MIT | ~1 MB | pesante |
 | Lightweight Charts | eccellenti per prezzi | buone | canvas, limitata | Apache-2.0 + attribuzione | ~45 kB | non copre istogrammi/strip plot |
 
-**Scelta: Recharts 2.15.4** — copre i quattro grafici con una sola libreria, è SVG e dichiarativa, licenza MIT. Ogni grafico ha comunque riepilogo testuale e tabella dati.
+**Scelta: Recharts 3.10** (la 2.x è dichiarata non più mantenuta) — copre i quattro grafici con una sola libreria, è SVG e dichiarativa, licenza MIT. Ogni grafico ha comunque riepilogo testuale e tabella dati.
 
 ## 6. Prodotto
 

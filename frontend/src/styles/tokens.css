@@ -1,0 +1,106 @@
+/* Token di design: colori, tipografia, spaziatura. Unica fonte per componenti e grafici. */
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efede7;
+  --border: #dcd8ce;
+  --border-strong: #b9b4a7;
+  --text: #16191d;
+  --text-2: #444b53;
+  --text-3: #626870;
+  --accent: #0e6b6b;
+  --accent-hover: #0a5656;
+  --accent-soft: #e0eeec;
+  --on-accent: #ffffff;
+  --event: #b45309;
+  --event-soft: #fbeedd;
+  --up: #1f5fa8;
+  --down: #c2410c;
+  --warning-bg: #fdf3dc;
+  --warning-text: #7a4a03;
+  --error-bg: #fbe4e1;
+  --error-text: #8f1d12;
+  --info-bg: #e6eef7;
+  --info-text: #1c4473;
+  --post-area: rgba(14, 107, 107, 0.06);
+  --grid: #e6e3db;
+  --focus: #0e6b6b;
+
+  /* Serie dei precedenti: distinguibili anche con deficit di visione dei colori comuni. */
+  --series-1: #1f5fa8;
+  --series-2: #c2410c;
+  --series-3: #6d28d9;
+  --series-4: #0f766e;
+  --series-5: #a16207;
+  --series-6: #be185d;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.25rem;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow: 0 1px 2px rgba(22, 25, 29, 0.06), 0 1px 1px rgba(22, 25, 29, 0.04);
+  --duration: 160ms;
+  --content-width: 1200px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111417;
+    --surface: #181c20;
+    --surface-2: #20252a;
+    --border: #2e353c;
+    --border-strong: #46505a;
+    --text: #e9ebee;
+    --text-2: #b9c0c7;
+    --text-3: #9aa3ac;
+    --accent: #4fb3b0;
+    --accent-hover: #6cc6c3;
+    --accent-soft: #173533;
+    --on-accent: #0b1514;
+    --event: #f5a524;
+    --event-soft: #3a2a10;
+    --up: #6aa8ec;
+    --down: #f08a4b;
+    --warning-bg: #3a2c0d;
+    --warning-text: #f6d58d;
+    --error-bg: #3d1713;
+    --error-text: #f6b4aa;
+    --info-bg: #142739;
+    --info-text: #a9cbf0;
+    --post-area: rgba(79, 179, 176, 0.08);
+    --grid: #262c32;
+    --focus: #6cc6c3;
+    --series-1: #6aa8ec;
+    --series-2: #f08a4b;
+    --series-3: #b49cf5;
+    --series-4: #4fc1b5;
+    --series-5: #e0b443;
+    --series-6: #f286b6;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}
