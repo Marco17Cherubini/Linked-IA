@@ -45,15 +45,17 @@ The thesis tested LiA on three shocks of different nature. All figures below are
 | **Lehman Brothers files for bankruptcy** — 15 Sep 2008, financial | 12 Sep 2008 | S&P 500 **−4.71%**, FTSE 100 −3.92%, DAX −2.74%, Nikkei −4.95% | S&P 500 **−28.16%**, every index between −22% and −28% | 0 |
 | **11 September attacks** — 11 Sep 2001, terrorism | 10 Sep 2001 | DAX **−8.49%** the same afternoon; S&P 500 **−4.92%** at the reopening on 17 Sep | S&P 500 −11.60% after 5 sessions | 0 |
 
+| 24/02/2022 — Russia invades Ukraine (DAX 40) | 15/09/2008 — Lehman Brothers (S&P 500) | 11/09/2001 — September 11 attacks (S&P 500) |
+| --- | --- | --- |
+| ![DAX 40 around the invasion of Ukraine: −3.96% in the first session, −2.38% after 20](docs/images/10-case-ukraine.jpg) | ![S&P 500 around the Lehman bankruptcy: −4.71% in the first session, −28.16% after 20](docs/images/08-case-lehman.jpg) | ![S&P 500 around 11 September: closed until the 17th, −4.92% at the reopening, −11.60% after 5 sessions](docs/images/11-case-sept11-chart.jpg) |
+
 **Ukraine — a geopolitical shock read correctly.** The blow hit hardest the markets closest to the conflict: European indices lost about 4% in the first session while Wall Street recovered within the day. The pattern is the one the IMF describes for military conflicts, and LiA can place it next to five earlier geopolitical events (Crimea 2014, Iraq 2003, Soleimani 2020, the 2017 North Korean test, the 2020 oil price war).
 
 **Lehman — a financial shock recognised as different.** The first-session falls already exceed the range the IMF reports for geopolitical shocks, and after 20 sessions all five indices are down 22–28%: the profile of a systemic banking crisis, the kind of systemic banking crisis catalogued in the IMF database by [Laeven & Valencia (2012)](https://www.imf.org/en/Publications/WP/Issues/2016/12/31/Systemic-Banking-Crises-Database-An-Update-26015). The thesis used exactly this contrast to show that LiA separates an external geopolitical shock from an internal financial one.
 
 **11 September — where the model meets a black swan.** US markets stayed closed until 17 September, the longest closure since 1933. The thesis prototype read only the data of the day itself and **failed**: it saw contained moves where there was a crash. The current version anchors the measure on the last close before the attack and reports the −4.92% at the reopening, flagging the closure. But it still has **no precedent to compare it with**: the statistics stay empty, because nothing like it had happened before. However well LiA reworks the data, an event without history remains outside what it can interpret — that is the limit the case was chosen to expose.
 
-| Lehman Brothers: the 20-session slide | 11 September: market closure and no precedents |
-| --- | --- |
-| ![S&P 500 around the Lehman bankruptcy: −4.71% in the first session, −28.16% after 20](docs/images/08-case-lehman.jpg) | ![Quality panel of 11 September: market closed for six days, no usable precedents](docs/images/09-case-sept11.jpg) |
+![11 September, quality panel: market closed for six days and no usable precedents](docs/images/09-case-sept11.jpg)
 
 ### From the thesis prototype to LiA 2.0
 
