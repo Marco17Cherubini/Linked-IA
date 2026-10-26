@@ -1,8 +1,8 @@
 # Piano di refactoring e riprogettazione — LiA
 
-Stato: **piano Fase 1 + Fase 2 approvato per l'esecuzione autonoma; implementazione in corso** (vedi §8).
+Stato: **Fase 1 e Fase 2 implementate sul branch `refactor/phase-1`** (vedi §8). Le tabelle §2–§3 descrivono il codice *precedente* e restano come diagnosi.
 
-Branch di lavoro: `refactor/phase-1` (HEAD = `origin/main`, nessun commit locale; working tree intatto).
+Branch di lavoro: `refactor/phase-1`, basato su `origin/main`; nessun push effettuato.
 
 ---
 
@@ -198,6 +198,41 @@ Strumento editoriale-analitico: fondo carta chiaro / grafite in modalità scura,
 Ordine reale: T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09 → T10 → T11 → T12 → T13 → T14 → T15 → T16.
 
 ## 8. Avanzamento
-- [x] Esplorazione e diagnosi
-- [x] Piano Fase 1 + Fase 2
-- [ ] Implementazione (vedi task)
+
+### Task
+| ID | Esito |
+|---|---|
+| T01–T02 | Commit di baseline (chiave rimossa prima del commit), rimozione di legacy, `server.py`, Vue e UI statica; documenti storici in `docs/history/` |
+| T03–T04 | `pyproject.toml`, venv, configurazione ed errori centralizzati |
+| T05–T06 | Dominio puro con convenzione temporale, indicatori, statistiche e cutoff dei precedenti, coperto da test |
+| T07–T08 | Provider Yahoo e DeepSeek con timeout/retry/validazione; storage SQLite; catalogo di 34 eventi reali |
+| T09–T11 | Servizi condivisi CLI/API, job in background, seed reale verificato contro chiusure note (S&P 500, DAX, FTSE, Nikkei) |
+| T12–T15 | Frontend riprogettato, verificato nel browser (desktop, mobile, tema chiaro/scuro, tastiera) |
+| T16 | CI, Dockerfile, README, architettura, decisioni |
+
+### Problemi strutturali (§2)
+Tutti risolti dalla nuova struttura: S1–S4 (sicurezza), S5–S10 (pipeline ed errori), S11 (mancanti = zero), S12 (timeout), S13–S16 (accesso ai dati, percorsi, pickle, costanti duplicate), S17 (logging), S18–S30 (pulizia, dipendenze, documentazione).
+
+### Difetti metodologici (§3)
+| ID | Esito |
+|---|---|
+| M1 | Risolto: nessun dato successivo alla seduta base negli input; esiti separati |
+| M2 | Risolto: cutoff sui precedenti e esclusione dell'evento stesso |
+| M3 | Risolto in parte: direzione e "confidenza" eliminate; restano statistiche descrittive su campioni piccoli, dichiarate come tali |
+| M4 | Risolto: seduta base determinata dall'orario (o convenzione prudente) |
+| M5 | Risolto: indicatori calcolati su sedute reali |
+| M6 | Risolto: "distanza dal massimo a 60 sedute", definita esplicitamente |
+| M7 | Risolto: volatilità annualizzata con √252 ed etichettata |
+| M8 | Risolto: fallback dei prezzi via LLM rimosso |
+| M9 | Risolto per rimozione: nessuna classificazione "IMF" senza fonte |
+| M10 | Rimosso |
+| M11 | Risolto: prezzi sincronizzati una volta per mercato, analisi indipendenti |
+
+### Aperti o rinviati
+- **Revoca della chiave DeepSeek** storica: va fatta dal proprietario sulla console del provider.
+- **Pubblicazione**: nessun push, merge o deploy effettuato. Il Dockerfile non è stato eseguito (Docker assente nell'ambiente).
+- **Sintesi IA**: implementata e testata con modello finto; mai eseguita con il servizio reale (richiede autorizzazione alla spesa).
+- **Catalogo**: le fonti sono voci di consultazione; per uso di ricerca servirebbero fonti primarie dell'epoca e una revisione delle etichette.
+- **Chiusure anticipate e cambi di orario storici** dei mercati (es. Xetra prima del 2003) non modellati.
+- **Validazione del metodo**: nessun test fuori campione; prima di introdurre similarità semantica o modelli previsionali serve un protocollo di valutazione.
+- **Cache pickle locali** (`ohlcv_cache/`, `cache_embeddings/`, `cache_turbo/`): non più usate, lasciate sul disco, escluse da Git.
