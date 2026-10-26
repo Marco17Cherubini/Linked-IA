@@ -42,11 +42,12 @@ export function KeyFigures({ data, view, horizon, market }) {
   const tone = (v) => (v === null || v === undefined ? undefined : v >= 0 ? 'up' : 'down')
   return (
     <div className="stat-grid stat-grid--key" aria-live="polite">
+      {/* La data mostrata per prima è quella dell'evento; la seduta base è solo il riferimento. */}
       <Stat
-        label="Seduta base"
+        label="Evento"
         term="base"
-        value={formatDate(data.base.date, 'medium')}
-        detail={`Chiusura ${formatNumber(data.base.close)} ${market.currency}`}
+        value={formatDate(data.event_time?.occurred_on ?? data.base.date, 'medium')}
+        detail={`Riferimento: chiusura del ${formatDate(data.base.date, 'medium')}, ${formatNumber(data.base.close)} ${market.currency}`}
       />
       <Stat
         label="Prima seduta dopo l'evento"
