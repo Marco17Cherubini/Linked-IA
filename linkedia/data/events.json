@@ -1,0 +1,437 @@
+{
+  "note": "Catalogo curato di eventi reali. Fonti di consultazione (Wikipedia) e fonti ufficiali; link verificati alla data accessed_on. Gli orari 'approximate' hanno un margine di incertezza di alcune ore.",
+  "events": [
+    {
+      "id": "sept11-attacks-2001",
+      "title": "Attacchi dell'11 settembre negli Stati Uniti",
+      "description": "Attacchi terroristici coordinati a New York e Washington. Le borse statunitensi restarono chiuse fino al 17 settembre 2001.",
+      "category": "terrorism",
+      "tags": ["terrorism", "united-states", "security", "market-closure"],
+      "occurred_on": "2001-09-11",
+      "occurred_at": "2001-09-11T08:46:00-04:00",
+      "time_precision": "exact",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/September_11_attacks", "publisher": "Wikipedia", "title": "September 11 attacks", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "iraq-invasion-2003",
+      "title": "Inizio dell'invasione dell'Iraq",
+      "description": "Una coalizione guidata dagli Stati Uniti avvia le operazioni militari contro l'Iraq.",
+      "category": "geopolitical_conflict",
+      "tags": ["war", "middle-east", "united-states", "oil"],
+      "occurred_on": "2003-03-20",
+      "occurred_at": "2003-03-20T05:34:00+03:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2003_invasion_of_Iraq", "publisher": "Wikipedia", "title": "2003 invasion of Iraq", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "hurricane-katrina-2005",
+      "title": "L'uragano Katrina tocca terra in Louisiana",
+      "description": "L'uragano raggiunge la costa del Golfo del Messico, con gravi danni a New Orleans e alle infrastrutture energetiche della regione.",
+      "category": "natural_disaster",
+      "tags": ["hurricane", "united-states", "energy", "oil"],
+      "occurred_on": "2005-08-29",
+      "occurred_at": "2005-08-29T06:10:00-05:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Hurricane_Katrina", "publisher": "Wikipedia", "title": "Hurricane Katrina", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "lehman-bankruptcy-2008",
+      "title": "Fallimento di Lehman Brothers",
+      "description": "Lehman Brothers presenta istanza di fallimento (Chapter 11), nella fase più acuta della crisi finanziaria globale.",
+      "category": "financial_crisis",
+      "tags": ["banking", "united-states", "credit", "systemic-risk"],
+      "occurred_on": "2008-09-15",
+      "occurred_at": "2008-09-15T01:45:00-04:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Bankruptcy_of_Lehman_Brothers", "publisher": "Wikipedia", "title": "Bankruptcy of Lehman Brothers", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "fed-zero-rates-2008",
+      "title": "La Federal Reserve porta i tassi vicino allo zero",
+      "description": "Il FOMC fissa l'obiettivo sui fed funds in un intervallo tra 0 e 0,25%.",
+      "category": "monetary_policy",
+      "tags": ["federal-reserve", "interest-rates", "united-states", "crisis-response"],
+      "occurred_on": "2008-12-16",
+      "occurred_at": "2008-12-16T14:15:00-05:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20081216b.htm", "publisher": "Federal Reserve", "title": "FOMC statement, 16 December 2008", "kind": "official", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "flash-crash-2010",
+      "title": "Flash crash di Wall Street",
+      "description": "In pochi minuti i principali indici statunitensi perdono e recuperano gran parte del valore durante la seduta.",
+      "category": "financial_crisis",
+      "tags": ["market-structure", "united-states", "liquidity"],
+      "occurred_on": "2010-05-06",
+      "occurred_at": "2010-05-06T14:32:00-04:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2010_flash_crash", "publisher": "Wikipedia", "title": "2010 flash crash", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "tohoku-earthquake-2011",
+      "title": "Terremoto e tsunami del Tōhoku",
+      "description": "Un terremoto di magnitudo 9 colpisce il Giappone nord-orientale; lo tsunami provoca anche l'incidente nucleare di Fukushima.",
+      "category": "natural_disaster",
+      "tags": ["earthquake", "japan", "nuclear", "asia"],
+      "occurred_on": "2011-03-11",
+      "occurred_at": "2011-03-11T14:46:00+09:00",
+      "time_precision": "exact",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2011_T%C5%8Dhoku_earthquake_and_tsunami", "publisher": "Wikipedia", "title": "2011 Tōhoku earthquake and tsunami", "kind": "reference", "accessed_on": "2026-10-26"},
+        {"url": "https://en.wikipedia.org/wiki/Fukushima_nuclear_accident", "publisher": "Wikipedia", "title": "Fukushima nuclear accident", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "us-credit-downgrade-2011",
+      "title": "S&P declassa il debito degli Stati Uniti",
+      "description": "Standard & Poor's riduce il rating del debito federale statunitense da AAA ad AA+, dopo la chiusura dei mercati.",
+      "category": "financial_crisis",
+      "tags": ["sovereign-debt", "united-states", "rating"],
+      "occurred_on": "2011-08-05",
+      "occurred_at": "2011-08-05T20:00:00-04:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/United_States_federal_government_credit-rating_downgrades", "publisher": "Wikipedia", "title": "United States federal government credit-rating downgrades", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "draghi-whatever-it-takes-2012",
+      "title": "Draghi: «whatever it takes» per l'euro",
+      "description": "Il presidente della BCE dichiara che la banca centrale farà tutto il necessario per preservare l'euro, nel pieno della crisi del debito sovrano.",
+      "category": "monetary_policy",
+      "tags": ["ecb", "europe", "sovereign-debt", "central-bank"],
+      "occurred_on": "2012-07-26",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://www.ecb.europa.eu/press/key/date/2012/html/sp120726.en.html", "publisher": "Banca centrale europea", "title": "Speech by Mario Draghi at the Global Investment Conference, London", "kind": "official", "accessed_on": "2026-10-26"},
+        {"url": "https://en.wikipedia.org/wiki/European_debt_crisis", "publisher": "Wikipedia", "title": "European debt crisis", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "taper-tantrum-2013",
+      "title": "Bernanke apre alla riduzione degli acquisti (taper tantrum)",
+      "description": "Il presidente della Fed indica la possibile riduzione degli acquisti di titoli; i rendimenti obbligazionari salgono nelle settimane successive.",
+      "category": "monetary_policy",
+      "tags": ["federal-reserve", "interest-rates", "united-states", "bonds"],
+      "occurred_on": "2013-05-22",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Taper_tantrum", "publisher": "Wikipedia", "title": "Taper tantrum", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "crimea-annexation-2014",
+      "title": "Annessione della Crimea alla Russia",
+      "description": "La Russia firma il trattato di annessione della Crimea; Stati Uniti e Unione europea rispondono con sanzioni.",
+      "category": "geopolitical_conflict",
+      "tags": ["russia", "ukraine", "sanctions", "europe"],
+      "occurred_on": "2014-03-18",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Annexation_of_Crimea_by_the_Russian_Federation", "publisher": "Wikipedia", "title": "Annexation of Crimea by the Russian Federation", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "greek-referendum-2015",
+      "title": "Referendum greco sul piano dei creditori",
+      "description": "Gli elettori greci respingono le condizioni proposte dai creditori internazionali, con le banche del paese chiuse.",
+      "category": "political",
+      "tags": ["referendum", "europe", "sovereign-debt", "greece"],
+      "occurred_on": "2015-07-05",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2015_Greek_bailout_referendum", "publisher": "Wikipedia", "title": "2015 Greek bailout referendum", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "china-devaluation-2015",
+      "title": "La Cina svaluta lo yuan",
+      "description": "La banca centrale cinese modifica il meccanismo di fissazione del cambio e lo yuan si deprezza, in una fase di forte turbolenza dei mercati cinesi.",
+      "category": "financial_crisis",
+      "tags": ["china", "currency", "emerging-markets", "asia"],
+      "occurred_on": "2015-08-11",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2015%E2%80%932016_Chinese_stock_market_turbulence", "publisher": "Wikipedia", "title": "2015–2016 Chinese stock market turbulence", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "paris-attacks-2015",
+      "title": "Attentati di Parigi",
+      "description": "Attacchi terroristici coordinati a Parigi e Saint-Denis nella sera di venerdì, dopo la chiusura delle borse europee.",
+      "category": "terrorism",
+      "tags": ["terrorism", "europe", "security"],
+      "occurred_on": "2015-11-13",
+      "occurred_at": "2015-11-13T21:16:00+01:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/November_2015_Paris_attacks", "publisher": "Wikipedia", "title": "November 2015 Paris attacks", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "brexit-referendum-2016",
+      "title": "Esito del referendum sulla Brexit",
+      "description": "Lo spoglio notturno indica la vittoria del voto per l'uscita del Regno Unito dall'Unione europea.",
+      "category": "political",
+      "tags": ["referendum", "europe", "united-kingdom", "currency"],
+      "occurred_on": "2016-06-24",
+      "occurred_at": "2016-06-24T04:40:00+01:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2016_United_Kingdom_European_Union_membership_referendum", "publisher": "Wikipedia", "title": "2016 United Kingdom European Union membership referendum", "kind": "reference", "accessed_on": "2026-10-26"},
+        {"url": "https://en.wikipedia.org/wiki/Brexit", "publisher": "Wikipedia", "title": "Brexit", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "us-election-2016",
+      "title": "Esito delle presidenziali statunitensi 2016",
+      "description": "Nella notte elettorale Donald Trump risulta vincitore delle elezioni presidenziali.",
+      "category": "political",
+      "tags": ["election", "united-states"],
+      "occurred_on": "2016-11-09",
+      "occurred_at": "2016-11-09T02:30:00-05:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2016_United_States_presidential_election", "publisher": "Wikipedia", "title": "2016 United States presidential election", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "italy-referendum-2016",
+      "title": "Referendum costituzionale italiano",
+      "description": "Gli elettori respingono la riforma costituzionale; il presidente del Consiglio annuncia le dimissioni.",
+      "category": "political",
+      "tags": ["referendum", "europe", "italy"],
+      "occurred_on": "2016-12-04",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2016_Italian_constitutional_referendum", "publisher": "Wikipedia", "title": "2016 Italian constitutional referendum", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "north-korea-nuclear-test-2017",
+      "title": "Test nucleare nordcoreano",
+      "description": "La Corea del Nord conduce il suo sesto test nucleare, il più potente fino a quel momento.",
+      "category": "geopolitical_conflict",
+      "tags": ["nuclear", "asia", "security"],
+      "occurred_on": "2017-09-03",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2017_North_Korean_nuclear_test", "publisher": "Wikipedia", "title": "2017 North Korean nuclear test", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "us-china-tariffs-2018",
+      "title": "Gli Stati Uniti annunciano dazi sulle importazioni cinesi",
+      "description": "Il presidente statunitense firma un memorandum che avvia dazi su beni importati dalla Cina, primo passo della guerra commerciale.",
+      "category": "trade",
+      "tags": ["tariffs", "united-states", "china", "trade-war"],
+      "occurred_on": "2018-03-22",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/China%E2%80%93United_States_trade_war", "publisher": "Wikipedia", "title": "China–United States trade war", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "soleimani-killing-2020",
+      "title": "Uccisione del generale iraniano Soleimani",
+      "description": "Un attacco statunitense con drone presso l'aeroporto di Baghdad uccide il comandante iraniano Qasem Soleimani.",
+      "category": "geopolitical_conflict",
+      "tags": ["middle-east", "iran", "united-states", "oil"],
+      "occurred_on": "2020-01-03",
+      "occurred_at": "2020-01-03T01:00:00+03:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Assassination_of_Qasem_Soleimani", "publisher": "Wikipedia", "title": "Assassination of Qasem Soleimani", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "italy-covid-outbreak-2020",
+      "title": "Focolai di COVID-19 nel Nord Italia",
+      "description": "Il governo isola i comuni dei primi focolai in Lombardia e Veneto: è il primo grande focolaio in Europa.",
+      "category": "pandemic",
+      "tags": ["pandemic", "health", "europe", "italy"],
+      "occurred_on": "2020-02-23",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/COVID-19_pandemic_in_Italy", "publisher": "Wikipedia", "title": "COVID-19 pandemic in Italy", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "oil-price-war-2020",
+      "title": "Guerra dei prezzi del petrolio tra Russia e Arabia Saudita",
+      "description": "Dopo il mancato accordo OPEC+, l'Arabia Saudita annuncia sconti e aumenti di produzione; il petrolio crolla all'apertura successiva.",
+      "category": "energy",
+      "tags": ["oil", "energy", "russia", "middle-east", "pandemic"],
+      "occurred_on": "2020-03-08",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2020_Russia%E2%80%93Saudi_Arabia_oil_price_war", "publisher": "Wikipedia", "title": "2020 Russia–Saudi Arabia oil price war", "kind": "reference", "accessed_on": "2026-10-26"},
+        {"url": "https://en.wikipedia.org/wiki/Black_Monday_(2020)", "publisher": "Wikipedia", "title": "Black Monday (2020)", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "who-pandemic-2020",
+      "title": "L'OMS dichiara la pandemia di COVID-19",
+      "description": "L'Organizzazione mondiale della sanità definisce la diffusione del COVID-19 una pandemia.",
+      "category": "pandemic",
+      "tags": ["pandemic", "health", "global"],
+      "occurred_on": "2020-03-11",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/COVID-19_pandemic", "publisher": "Wikipedia", "title": "COVID-19 pandemic", "kind": "reference", "accessed_on": "2026-10-26"},
+        {"url": "https://en.wikipedia.org/wiki/2020_stock_market_crash", "publisher": "Wikipedia", "title": "2020 stock market crash", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "fed-emergency-cut-2020",
+      "title": "Taglio d'emergenza dei tassi della Federal Reserve",
+      "description": "Di domenica, la Fed porta i tassi tra 0 e 0,25% e annuncia acquisti di titoli in risposta alla pandemia.",
+      "category": "monetary_policy",
+      "tags": ["federal-reserve", "interest-rates", "pandemic", "crisis-response"],
+      "occurred_on": "2020-03-15",
+      "occurred_at": "2020-03-15T17:00:00-04:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20200315a.htm", "publisher": "Federal Reserve", "title": "Federal Reserve press release, 15 March 2020", "kind": "official", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "pfizer-vaccine-2020",
+      "title": "Pfizer e BioNTech annunciano l'efficacia del vaccino",
+      "description": "I risultati preliminari della fase 3 indicano un'efficacia superiore al 90% del vaccino contro il COVID-19.",
+      "category": "pandemic",
+      "tags": ["pandemic", "health", "vaccine"],
+      "occurred_on": "2020-11-09",
+      "occurred_at": "2020-11-09T06:45:00-05:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Pfizer%E2%80%93BioNTech_COVID-19_vaccine", "publisher": "Wikipedia", "title": "Pfizer–BioNTech COVID-19 vaccine", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "russia-invades-ukraine-2022",
+      "title": "La Russia invade l'Ucraina",
+      "description": "All'alba del 24 febbraio la Russia avvia un'invasione su larga scala dell'Ucraina; seguono sanzioni occidentali e forti rialzi dei prezzi energetici.",
+      "category": "geopolitical_conflict",
+      "tags": ["war", "russia", "ukraine", "europe", "energy", "sanctions"],
+      "occurred_on": "2022-02-24",
+      "occurred_at": "2022-02-24T05:00:00+02:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine", "publisher": "Wikipedia", "title": "Russian invasion of Ukraine", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "fed-first-hike-2022",
+      "title": "La Fed avvia il ciclo di rialzi dei tassi",
+      "description": "Il FOMC alza i tassi di 0,25 punti, primo rialzo dal 2018, per contrastare l'inflazione.",
+      "category": "monetary_policy",
+      "tags": ["federal-reserve", "interest-rates", "inflation", "united-states"],
+      "occurred_on": "2022-03-16",
+      "occurred_at": "2022-03-16T14:00:00-04:00",
+      "time_precision": "exact",
+      "sources": [
+        {"url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20220316a.htm", "publisher": "Federal Reserve", "title": "FOMC statement, 16 March 2022", "kind": "official", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "svb-collapse-2023",
+      "title": "Crollo di Silicon Valley Bank",
+      "description": "Le autorità californiane chiudono Silicon Valley Bank e ne affidano la gestione alla FDIC, dopo una corsa agli sportelli.",
+      "category": "financial_crisis",
+      "tags": ["banking", "united-states", "interest-rates", "systemic-risk"],
+      "occurred_on": "2023-03-10",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Collapse_of_Silicon_Valley_Bank", "publisher": "Wikipedia", "title": "Collapse of Silicon Valley Bank", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "credit-suisse-ubs-2023",
+      "title": "UBS acquisisce Credit Suisse",
+      "description": "Con il sostegno delle autorità svizzere, UBS annuncia di domenica l'acquisizione di emergenza di Credit Suisse.",
+      "category": "financial_crisis",
+      "tags": ["banking", "europe", "systemic-risk"],
+      "occurred_on": "2023-03-19",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Acquisition_of_Credit_Suisse_by_UBS", "publisher": "Wikipedia", "title": "Acquisition of Credit Suisse by UBS", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "hamas-attack-israel-2023",
+      "title": "Attacco di Hamas contro Israele",
+      "description": "Il 7 ottobre, di sabato, Hamas lancia un attacco su larga scala contro Israele; segue la guerra a Gaza.",
+      "category": "geopolitical_conflict",
+      "tags": ["war", "middle-east", "israel", "terrorism"],
+      "occurred_on": "2023-10-07",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/October_7_attacks", "publisher": "Wikipedia", "title": "October 7 attacks", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "iran-strikes-israel-2024",
+      "title": "Attacco diretto dell'Iran contro Israele",
+      "description": "Di sabato l'Iran lancia droni e missili contro Israele, primo attacco diretto dal proprio territorio.",
+      "category": "geopolitical_conflict",
+      "tags": ["middle-east", "iran", "israel", "war"],
+      "occurred_on": "2024-04-13",
+      "time_precision": "unknown",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/April_2024_Iranian_strikes_against_Israel", "publisher": "Wikipedia", "title": "April 2024 Iranian strikes against Israel", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "us-election-2024",
+      "title": "Esito delle presidenziali statunitensi 2024",
+      "description": "Nella notte elettorale Donald Trump risulta vincitore delle elezioni presidenziali.",
+      "category": "political",
+      "tags": ["election", "united-states"],
+      "occurred_on": "2024-11-06",
+      "occurred_at": "2024-11-06T05:30:00-05:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/2024_United_States_presidential_election", "publisher": "Wikipedia", "title": "2024 United States presidential election", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "liberation-day-tariffs-2025",
+      "title": "Dazi del «Liberation Day»",
+      "description": "Dopo la chiusura di Wall Street, il presidente statunitense annuncia dazi generalizzati sulle importazioni da quasi tutti i paesi.",
+      "category": "trade",
+      "tags": ["tariffs", "united-states", "trade-war", "global-trade"],
+      "occurred_on": "2025-04-02",
+      "occurred_at": "2025-04-02T16:00:00-04:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Liberation_Day_tariffs", "publisher": "Wikipedia", "title": "Liberation Day tariffs", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "twelve-day-war-2025",
+      "title": "Israele attacca l'Iran: inizio della guerra dei dodici giorni",
+      "description": "Israele colpisce siti militari e nucleari iraniani; segue un conflitto aperto di circa due settimane.",
+      "category": "geopolitical_conflict",
+      "tags": ["war", "middle-east", "iran", "israel", "oil"],
+      "occurred_on": "2025-06-13",
+      "occurred_at": "2025-06-13T03:00:00+03:00",
+      "time_precision": "approximate",
+      "sources": [
+        {"url": "https://en.wikipedia.org/wiki/Twelve-Day_War", "publisher": "Wikipedia", "title": "Twelve-Day War", "kind": "reference", "accessed_on": "2026-10-26"}
+      ]
+    }
+  ]
+}
