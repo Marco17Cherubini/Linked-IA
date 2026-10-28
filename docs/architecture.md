@@ -29,10 +29,12 @@ CLI e API usano gli stessi servizi: non esiste una seconda pipeline.
 | `linkedia/providers/llm.py` | client DeepSeek (JSON mode) | `errors` |
 | `linkedia/storage/store.py` | SQLite: eventi, fonti, prezzi, analisi, sintesi | `domain`, `errors` |
 | `linkedia/services/analysis.py` | creazione eventi, sincronizzazione prezzi, calcolo analisi | tutto tranne `api`/`cli` |
-| `linkedia/services/summary.py` | sintesi IA: permessi, limiti, prompt, validazione | idem |
+| `linkedia/services/summary.py` | sintesi IA: limiti, prompt, tentativi con riserva, validazione | idem |
+| `linkedia/services/budget.py` | prezzi verificati, costo massimo, prenotazione atomica, riconciliazione, blocco | idem |
+| `linkedia/services/auth.py` | hash Argon2id, sessioni opache, limiti ai tentativi | idem |
 | `linkedia/services/jobs.py` | esecutore in background (1 thread) o in linea | — |
 | `linkedia/api/` | rotte JSON, gestione errori, intestazioni di sicurezza, frontend statico | `services`, `storage`, `domain` |
-| `linkedia/cli.py` | `seed`, `analyze`, `events`, `serve` | `services`, `storage` |
+| `linkedia/cli.py` | `init`, `seed`, `analyze`, `events`, `set-public`, `hash-password`, `revoke-sessions`, `backup`, `serve` | `services`, `storage` |
 
 Importare un modulo non apre connessioni, non legge chiavi e non scrive file: `Settings.from_env()` e `create_app()` sono chiamati esplicitamente.
 
@@ -48,26 +50,32 @@ Ogni risultato è salvato come JSON immutabile con la versione del metodo e un'i
 
 ## Persistenza
 
-SQLite (`instance/lia.sqlite3`, configurabile). Tabelle: `events`, `sources`, `prices`, `price_sync`, `analyses`, `summaries`, `meta`. Lo stato dei job (`queued`, `running`, `succeeded`, `failed`) è nel database; all'avvio i job rimasti aperti vengono marcati `interrupted`.
+SQLite (`instance/lia.sqlite3`, configurabile; in produzione `/data` sul volume). Tabelle: `events` (con `public`), `sources`, `prices`, `price_sync`, `analyses`, `summaries`, `operator_sessions`, `login_attempts`, `spend_ledger`, `budget_state`, `meta` (versione dello schema e segreto dell'istanza). La migrazione v1 → v2 aggiunge colonne e tabelle senza cancellare dati. Lo stato dei job (`queued`, `running`, `succeeded`, `failed`) è nel database; all'avvio i job rimasti aperti vengono marcati `interrupted`.
 
 I prezzi si scaricano una volta per mercato per l'intervallo del catalogo e si aggiornano al più una volta al giorno; dopo un errore del provider si attende 10 minuti prima di riprovare.
 
 ## Contratti API
 
-Tutte le risposte sono JSON. Errori: `{"error": {"code", "message"}}` con stato HTTP coerente (400 input non valido, 403 permessi, 404 non trovato, 409 conflitto, 502 provider non disponibile, 503 funzione non configurata, 500 errore interno senza dettagli).
+Tutte le risposte sono JSON. Errori: `{"error": {"code", "message", "retry_after?", "retry_at?"}}` con stato HTTP coerente (400 input non valido, 401 accesso richiesto, 403 CSRF/origine, 404 non trovato, 409 conflitto, 429 limite/budget/job in corso con `Retry-After`, 502 provider non disponibile, 503 funzione non configurata, 500 errore interno senza dettagli).
+
+Senza sessione sono visibili solo gli eventi con `public = 1` (catalogo curato). Le rotte marcate *operatore* richiedono il cookie di sessione e, se modificano lo stato, l'intestazione `X-CSRF-Token` e un'origine uguale a quella del sito. Sicurezza, budget e procedure: [`docs/deployment-security.md`](deployment-security.md).
 
 | Metodo e percorso | Descrizione |
 |---|---|
-| `GET /api/health` | stato e versione |
-| `GET /api/meta` | mercati, orizzonti, categorie, criteri dei precedenti, funzioni abilitate |
-| `GET /api/featured` | `{event_id, analysis_id}` del caso dimostrativo |
-| `GET /api/events?q&category&page&page_size` | eventi con l'analisi da mostrare (ultima completata) |
-| `GET /api/events/:id` | evento e fonti |
-| `POST /api/events` | crea evento e accoda l'analisi (token) → 202 `{event_id, analysis_id}` |
-| `POST /api/events/:id/analyses` | ricalcola (token) → 202 |
+| `GET /api/health` | `{status}`; 503 se il database non risponde |
+| `GET /api/meta` | mercati, orizzonti, categorie, criteri, funzioni abilitate, dati per le informative |
+| `GET /api/featured` | `{event_id, analysis_id}` del caso dimostrativo (solo se pubblico) |
+| `GET /api/events?q&category&page&page_size` | eventi visibili con l'analisi da mostrare (ultima completata) |
+| `GET /api/events/:id` | evento e fonti (404 se privato e senza sessione) |
+| `POST /api/events` | *operatore* · crea evento privato e accoda l'analisi → 202 `{event_id, analysis_id}` |
+| `POST /api/events/:id/analyses` | *operatore* · ricalcola → 202 |
 | `GET /api/analyses?q&category&status&from&to&page&page_size` | archivio paginato (max 50 per pagina) |
-| `GET /api/analyses/:id?market&view` | stato, evento, mercati disponibili, risultato del mercato scelto; `view=as_of` omette `outcomes`; ETag |
-| `POST /api/analyses/:id/summary` | `{confirm_cost: true, regenerate?}` (token) → 202 |
+| `GET /api/analyses/:id?market&view` | stato, evento, mercati, risultato del mercato scelto; `view=as_of` omette `outcomes`; ETag |
+| `POST /api/analyses/:id/summary` | *operatore* · `{confirm_cost: true, regenerate?}` → 202, oppure 429 se il budget è bloccato |
+| `GET /api/auth/session` | `{authenticated, expires_at?, csrf_token?}` |
+| `POST /api/auth/login` | `{password}` → cookie `__Host-lia_session`; 401 errata, 429 troppi tentativi |
+| `POST /api/auth/logout` | *operatore* · elimina la sessione sul server |
+| `GET /api/operator/budget` | *operatore* · confermato, riservato, incerto, residuo, blocco e possibile sblocco |
 
 Forma di `data` (un mercato):
 

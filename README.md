@@ -8,6 +8,8 @@
 
 > The user interface is in Italian: LiA was developed for a thesis at the University of Eastern Piedmont (UNIUPO).
 
+**Live:** <https://linked-intelligent-analyst.it> — the demo cases are public; new analyses and AI summaries are reserved to the operator.
+
 ---
 
 ## The story
@@ -97,7 +99,7 @@ Every analysis is saved with the method version and a snapshot of the event, so 
 
 ### AI only when asked
 
-An authorised analyst can request a written summary. It costs money, so it needs **explicit confirmation**, runs once per analysis within a daily limit, receives only the computed data and must answer with a fixed, validated structure. Browsing, filtering or switching markets never calls the model.
+The signed-in operator can request a written summary. It costs money, so it needs **explicit confirmation**, runs once per analysis, receives only the computed data and must answer with a fixed, validated structure. Every attempt first **reserves its worst-case cost** against a global budget (3 USD per rolling 24 hours, persisted in SQLite); uncertain outcomes keep their reservation and an exhausted budget pauses new calls for at least an hour. Browsing, filtering or switching markets never calls the model.
 
 ### Searchable archive
 
@@ -139,9 +141,9 @@ Routes only translate HTTP; the method lives in `domain/`, which has no I/O. Err
 
 ### Quality and security
 
-- **47 offline backend tests** with the network blocked: event-to-session convention across time zones, indicators, minimum sample sizes, precedent cutoff, provider failures, API contracts, persistence, restart recovery and cost controls on the AI summary. **14 frontend tests** cover formatting, chart scales, form payloads and the as-of view.
+- **98 offline backend tests** with the network blocked: event-to-session convention across time zones, indicators, precedent cutoff, provider failures, API contracts, restart recovery, operator access (sessions, CSRF, rate limits, legacy paths), public/private isolation and the spend ledger (concurrent reservations, retries, uncertain timeouts, persistent block). **21 frontend tests** cover formatting, chart scales, form payloads, the as-of view, the API client and the legal pages.
 - An optional smoke test checks the real price provider against a known close.
-- No secrets in the source code; analyst token compared in constant time and never put in URLs; debug off by default; Content Security Policy; request size limit.
+- Password stored only as an Argon2id hash; opaque server-side sessions in a `__Host-` HttpOnly cookie; nothing sensitive in browser storage or URLs; debug off; strict CSP and security headers; no trackers and no third-party resources. Details in [docs/deployment-security.md](docs/deployment-security.md).
 - GitHub Actions runs lint, tests and the production build on every push (Python 3.11 and 3.12, Node 22).
 
 ---
@@ -171,7 +173,12 @@ No command calls a paid service. Without any configuration LiA runs in read-only
 
 | Command                               | What it does                                                   |
 | ------------------------------------- | -------------------------------------------------------------- |
+| `python -m linkedia init`             | Schema, catalogue and missing demo analyses (run at start-up)  |
 | `python -m linkedia seed`             | Import the curated catalogue, sync prices, compute analyses    |
+| `python -m linkedia hash-password`    | Read a password from the keyboard, print its Argon2id hash     |
+| `python -m linkedia revoke-sessions`  | Close every operator session                                   |
+| `python -m linkedia backup`           | Consistent copy of the database (last 7 kept)                  |
+| `python -m linkedia set-public <id>`  | Publish (or with `--off` hide) a case                          |
 | `python -m linkedia analyze <id>`     | Recompute the analysis of one event                            |
 | `python -m linkedia events`           | List the events in the database                                |
 | `python -m linkedia serve`            | Development server on 127.0.0.1:5000                           |
@@ -186,10 +193,16 @@ Copy `.env.example` to `.env`. Every variable is optional.
 
 | Variable              | Default                  | Purpose                                                           |
 | --------------------- | ------------------------ | ----------------------------------------------------------------- |
-| `LIA_ADMIN_TOKEN`     | —                        | Enables creating analyses and requesting AI summaries             |
-| `DEEPSEEK_API_KEY`    | —                        | Enables the AI summary (paid), together with the token            |
-| `DEEPSEEK_MODEL`      | `deepseek-chat`          | Model used for the summary                                        |
+| `LIA_OPERATOR_PASSWORD_HASH` | —                 | Argon2id hash of the operator password; without it LiA is read-only |
+| `LIA_SESSION_EPOCH`   | `1`                      | Change it to revoke every session                                 |
+| `LIA_COOKIE_SECURE`   | `true`                   | Set `false` only for local development over plain HTTP            |
+| `LIA_PROXY_HOPS`      | `0`                      | Trusted reverse proxies (Railway: `1`)                            |
+| `LIA_CANONICAL_HOST`  | —                        | Redirect `www.<host>` to this host                                |
+| `DEEPSEEK_API_KEY`    | —                        | Enables the AI summary (paid), together with the password hash    |
+| `DEEPSEEK_MODEL`      | `deepseek-flash`         | Must have a verified price in `linkedia/services/budget.py`       |
+| `LIA_API_BUDGET_USD`  | `3.00`                   | Global budget for paid calls over the rolling 24-hour window      |
 | `LIA_AI_DAILY_LIMIT`  | `20`                     | Maximum summaries in 24 hours                                     |
+| `LIA_CONTROLLER_NAME` / `LIA_CONTROLLER_EMAIL` | — | Data controller shown in the privacy and cookie policies     |
 | `LIA_DATABASE_PATH`   | `instance/lia.sqlite3`   | SQLite file (relative paths start from the project root)          |
 | `LIA_FRONTEND_DIST`   | `frontend/dist`          | Built frontend served by Flask                                    |
 | `LIA_FEATURED_EVENT`  | `russia-invades-ukraine-2022` | Demo case on the home page                                  |
@@ -199,15 +212,9 @@ Copy `.env.example` to `.env`. Every variable is optional.
 
 ### Deployment
 
-The `Dockerfile` builds the frontend and runs Gunicorn as **one process** (background jobs live in the process, their state in SQLite). Mount a persistent volume on `/data`, set a strong `LIA_ADMIN_TOKEN` and serve the app behind HTTPS:
+Production runs on **Railway** from the `main` branch, behind <https://linked-intelligent-analyst.it> (DNS at Hostinger, certificate managed by Railway). The `Dockerfile` builds the frontend and starts `docker-entrypoint.sh`: it fixes the ownership of the `/data` volume, drops privileges, runs the idempotent `python -m linkedia init` and starts Gunicorn as **one process** on `$PORT` (background jobs live in the process, their state in SQLite on the volume).
 
-```bash
-docker build -t lia .
-docker run -p 8000:8000 -v lia-data:/data --env-file .env lia
-docker run --rm -v lia-data:/data lia python -m linkedia seed
-```
-
-The image has not been run yet: it was written in an environment without Docker.
+Configuration, password rotation, session revocation, backup and restore, DNS records and the spend-control design are documented in [docs/deployment-security.md](docs/deployment-security.md).
 
 ---
 
@@ -218,7 +225,7 @@ Before pushing, run `ruff check .`, `python -m pytest` and, in `frontend/`, `npm
 - **Domain**: `linkedia/domain/` is pure — no network, files or imports from the rest of the package. Changing a formula, a time convention or the precedent rules means bumping `METHOD_VERSION` and updating the Methodology page and the tests.
 - **Errors**: provider failures are `ProviderUnavailable` and are never turned into empty lists or zeros; missing values stay `null` with a reason.
 - **Frontend**: view state lives in the URL (`useUrlState`); definitions shared by charts and the Methodology page are in `src/content/glossary.js`; colours come from tokens so both themes keep their contrast.
-- **AI**: paid calls happen only through `POST /api/analyses/:id/summary` with `confirm_cost`, never in tests or in `seed`.
+- **AI**: paid calls happen only through `POST /api/analyses/:id/summary` with `confirm_cost`, by a signed-in operator, after a budget reservation — never in tests, `seed` or `init`.
 - User-facing text and code comments are in Italian. Architecture and API contracts are in [docs/architecture.md](docs/architecture.md), decisions in [docs/decisions/](docs/decisions/).
 
 ## Known limitations
@@ -228,6 +235,7 @@ Before pushing, run `ruff check .`, `python -m pytest` and, in `frontend/`, `npm
 - **Unofficial price source**: the Yahoo endpoint is public but not an official API; gaps and errors are flagged, never filled.
 - **Reference sources**: catalogue sources are encyclopedia entries and official statements, not original reports from the time.
 - **Market hours**: early closes and historical changes of closing time (except Tokyo 2024) are not modelled; approximate event times can shift the base session when they fall near a close.
+- **Spend control is applicative**: it relies on the price table and on the usage reported by the provider; keep a low prepaid balance on the DeepSeek account as an independent limit.
 - **No out-of-sample validation**: semantic similarity and forecasting models are deliberately out of scope until the method can be evaluated.
 
 ## Project structure
