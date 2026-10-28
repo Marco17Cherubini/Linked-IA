@@ -8,7 +8,7 @@
 
 > The user interface is in Italian: LiA was developed for a thesis at the University of Eastern Piedmont (UNIUPO).
 
-**Live:** <https://linked-intelligent-analyst.it> — the demo cases are public; new analyses and AI summaries are reserved to the operator.
+**Live:** <https://linked-intelligent-analyst.it> — the demo cases are public; the news search by date, new analyses and AI summaries are reserved to the signed-in operator.
 
 ---
 
@@ -26,12 +26,13 @@ LiA was born as the project of a thesis at the University of Eastern Piedmont (U
 
 LiA is a web application with a Python back end and a React front end:
 
-- a **catalogue of documented events** — date, time with time zone, category, tags and sources — that analysts can extend;
+- an **automatic news search by date**: the operator picks a day, LiA finds the news in web sources, groups the articles into events with their sources and publication dates, and analyses the one the operator chooses — no news typed by hand;
+- a **catalogue of documented events** — date, time with time zone, category, tags and sources — that serves as the public demo cases and as the pool of precedents;
 - **daily prices of five indices** (S&P 500, Nasdaq Composite, DAX 40, FTSE 100, Nikkei 225) downloaded for free from Yahoo Finance;
 - a **deterministic engine** that finds, for each market, the last close before the event, measures what happened after 1, 5 and 20 sessions and selects comparable precedents whose outcome was already known on that date;
-- an **optional AI summary**: with a DeepSeek API key, an authorised analyst can ask for a written reading of the computed data, never generated automatically.
+- an **optional AI summary**: with a DeepSeek API key, the operator can ask for a written reading of the computed data, never generated automatically.
 
-Exploring a case takes three steps: open an event, look at the market around it, compare it with its precedents.
+The operator's path is: **sign in → pick a date → read the events found → analyse one**. Visitors explore the public cases in three steps: open an event, look at the market around it, compare it with its precedents.
 
 | 1. Open an event                                                                                 | 2. Read the market around it                                                                                   | 3. Compare with precedents                                                                          |
 | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -63,13 +64,19 @@ The thesis tested LiA on three shocks of different nature. All figures below are
 
 ### From the thesis prototype to LiA 2.0
 
-The prototype described in the thesis scraped news, asked a language model to write a link between each article and the prices, and compared those texts word by word. A review showed that some indicators used prices from after the event, that "patterns" were searched among later events too, and that provider errors silently became empty results. LiA 2.0 keeps the idea and the case studies but rebuilds the method on checkable data: structured events, an explicit time convention, precedents with no hindsight and statistics that declare their sample size. The original pipeline is documented in [docs/history/](docs/history/).
+The prototype described in the thesis scraped news, asked a language model to write a link between each article and the prices, and compared those texts word by word. A review showed that some indicators used prices from after the event, that "patterns" were searched among later events too, and that provider errors silently became empty results. LiA 2.0 keeps the idea and the case studies but rebuilds the method on checkable data: structured events, an explicit time convention, precedents with no hindsight and statistics that declare their sample size. The search for news by date — the starting point of the prototype — is back as the main path, rebuilt on a search API whose results are re-checked on the server instead of on scraping and free text written by a model ([decision 0005](docs/decisions/0005-automatic-news-search.md)). The original pipeline is documented in [docs/history/](docs/history/).
 
 ---
 
 ## What makes it different
 
 LiA is not a news feed or a price chart: every feature exists to make the link between an event and the markets readable and honest.
+
+### Find the news by date
+
+The operator picks a day (or a range of up to seven days). LiA queries the Perplexity Search API with a few generated queries and **re-checks every publication date on the server**, because a provider date filter alone does not prove that a source is from the time. Sources published within two days are labelled *of the time*; later reconstructions are labelled as such, because they may contain hindsight. Index pages, timelines and results in other languages are discarded with an explicit reason; articles on the same fact are grouped (similar titles or at least three shared distinctive names), and syndicated copies count as one source. Each event card shows its sources, publication dates and warnings; one click on *Analizza questo evento* creates a private event and runs the market analysis. URLs and dates always come from the search results: an optional language model may only group and describe them. Errors — missing key, rejected credentials, timeouts, provider limits, exhausted budget — are never shown as "no events", and the page speaks of events *found in the sources consulted*, never of all the events of that day.
+
+In the first real checks (Lehman Brothers, 15 September 2008; invasion of Ukraine, 24 February 2022) each search took about 4 seconds and cost 0.010 USD; 20 sources of the time were found for each date, grouped into one main event with 18 and 14 independent sources ([details](docs/decisions/0005-automatic-news-search.md#seconda-verifica-reale-28-ottobre-2026-regole-news-v3)).
 
 ### The base session: time zones taken seriously
 
@@ -93,17 +100,17 @@ Each chart comes with a written summary and a data table, definitions are one cl
 
 ![Phone layout of the analysis workspace](docs/images/07-mobile.jpg)
 
-### Find the news by date
-
-The operator picks a day (or a range of up to seven days). LiA queries the Perplexity Search API, **re-checks every publication date on the server**, merges duplicate and syndicated articles, and returns event cards with sources, publication dates and explicit warnings. One click on *Analizza questo evento* creates a private event and runs the market analysis — no typing the news by hand. Sources published within two days are labelled *of the time*; later reconstructions are labelled as such, because they may contain hindsight. URLs and dates always come from the search results: an optional language model may only group and describe them. The search is never exhaustive: the page speaks of events *found in the sources consulted*.
-
 ### Analyses you can reopen and share
 
 Every analysis is saved with the method version and a snapshot of the event, so **reopening it shows exactly the same result**. Market, view, window, horizon and selected precedents live in the URL. Jobs keep running on the server if the page is reloaded.
 
 ### AI only when asked
 
-The signed-in operator can request a written summary. It costs money, so it needs **explicit confirmation**, runs once per analysis, receives only the computed data and must answer with a fixed, validated structure. Every attempt first **reserves its worst-case cost** against a global budget (3 USD per rolling 24 hours, persisted in SQLite); uncertain outcomes keep their reservation and an exhausted budget pauses new calls for at least an hour. Browsing, filtering or switching markets never calls the model.
+The signed-in operator can request a written summary. It costs money, so it needs **explicit confirmation**, runs once per analysis, receives only the computed data and must answer with a fixed, validated structure. Browsing, filtering or switching markets never calls the model.
+
+### Spend under control
+
+Every paid call — news search, optional event extraction, AI summary, and each retry — first **reserves its worst-case cost** against one global budget (3 USD per rolling 24 hours, persisted in SQLite, the same for every session and IP). Uncertain outcomes keep their reservation, an exhausted budget pauses new calls for at least an hour, identical searches reuse the saved results, and only one external job runs at a time. The operator sees confirmed, reserved and uncertain amounts, the remaining budget and when calls can resume.
 
 ### Searchable archive
 
@@ -122,30 +129,37 @@ All saved analyses can be filtered by text, category, status and date, with pagi
 | Server      | Python + Flask                                 | Small API over a deterministic domain layer; the same services serve the API and the CLI |
 | Database    | SQLite (standard library `sqlite3`)            | One file, transactions, job state that survives restarts; no service to run             |
 | Market data | Yahoo Finance public chart endpoint            | Free daily prices for the five indices; timeouts, limited retries, validation, cooldown |
-| AI          | DeepSeek (OpenAI-compatible, JSON mode)        | Optional summary, only on explicit request                                              |
+| News search | Perplexity Search API                          | Raw results with publication dates, re-checked on the server; priced per request        |
+| AI          | DeepSeek (OpenAI-compatible, JSON mode)        | Optional summary and event extraction, only on explicit operator action                  |
+| Access      | Argon2id (`argon2-cffi`) + server-side sessions | One operator, revocable sessions, CSRF protection, persistent rate limits               |
 | Frontend    | React 18 + Vite + React Router                 | Interactive workspace with state in the URL                                             |
 | Charts      | Recharts 3                                     | One declarative SVG library for line, dot and histogram charts                          |
 | Tests       | pytest (network blocked) + Vitest              | Offline, no keys, no costs                                                              |
+| Hosting     | Docker + Gunicorn on Railway, DNS at Hostinger | One process and one replica with SQLite on a persistent volume                          |
 
 ### Architecture
 
 ```
-frontend/ (React)                         linkedia/
-  pages/          home, archive,            api/          Flask routes, errors, security headers
-                  methodology, new          cli.py        seed · analyze · events · serve
-  features/       workspace, charts,        services/     analyses, AI summary, background jobs
-    analysis/     panels, job polling       domain/       markets, sessions, indicators,
-  components/     controls, tabs, states                  precedents, statistics (pure, no I/O)
-  styles/         tokens → base →           providers/    Yahoo prices, DeepSeek (timeouts, retries)
-                  components → pages        storage/      SQLite: events, prices, analyses
-        fetch JSON  ─────────────────▶
+frontend/ (React)                           linkedia/
+  pages/          home, archive, methodology, api/          Flask routes, operator access, CSRF,
+                  sign-in, manual entry,                    security headers, news routes
+                  privacy, cookie policy      cli.py        init · seed · analyze · events · backup
+  features/news/  search by date, event                     hash-password · revoke-sessions · serve
+                  cards, progress             services/     analyses, news search and extraction,
+  features/       workspace, charts, panels,                AI summary, budget and paid calls,
+    analysis/     AI summary, job polling                   operator sessions, background jobs
+  components/     controls, budget panel      domain/       markets, sessions, indicators, precedents,
+  lib/            API client, session state                 statistics, news rules (pure, no I/O)
+  styles/         tokens → base →             providers/    Yahoo prices, Perplexity search, DeepSeek
+                  components → pages          storage/      SQLite: events, prices, analyses, searches,
+        fetch JSON (same origin) ─────────▶                 sessions, spend ledger
 ```
 
-Routes only translate HTTP; the method lives in `domain/`, which has no I/O. Errors have stable codes (400/403/404/409/502/503) and a message for the user; diagnostic details stay in the server logs.
+Routes only translate HTTP; the method and the news rules live in `domain/`, which has no I/O. Errors have stable codes (400/401/403/404/409/429/502/503) and a message for the user; diagnostic details stay in the server logs.
 
 ### Quality and security
 
-- **98 offline backend tests** with the network blocked: event-to-session convention across time zones, indicators, precedent cutoff, provider failures, API contracts, restart recovery, operator access (sessions, CSRF, rate limits, legacy paths), public/private isolation and the spend ledger (concurrent reservations, retries, uncertain timeouts, persistent block). **21 frontend tests** cover formatting, chart scales, form payloads, the as-of view, the API client and the legal pages.
+- **151 offline backend tests** with the network blocked: event-to-session convention across time zones, indicators, precedent cutoff, provider failures, API contracts, restart recovery, operator access (sessions, CSRF, rate limits, legacy paths), public/private isolation, the spend ledger (concurrent reservations, retries, uncertain timeouts, persistent block) and the news search (time windows, future information, grouping, index pages, malformed or hostile sources, cache, errors never shown as empty results). **26 frontend tests** cover formatting, chart scales, form payloads, the as-of view, the API client, the event cards and the legal pages.
 - An optional smoke test checks the real price provider against a known close.
 - Password stored only as an Argon2id hash; opaque server-side sessions in a `__Host-` HttpOnly cookie; nothing sensitive in browser storage or URLs; debug off; strict CSP and security headers; no trackers and no third-party resources. Details in [docs/deployment-security.md](docs/deployment-security.md).
 - GitHub Actions runs lint, tests and the production build on every push (Python 3.11 and 3.12, Node 22).
@@ -171,7 +185,7 @@ Load the catalogue and start the app:
 .venv/Scripts/python -m linkedia serve   # http://127.0.0.1:5000
 ```
 
-No command calls a paid service. Without any configuration LiA runs in read-only mode.
+No command calls a paid service. Without any configuration LiA runs in read-only mode. To sign in locally, set `LIA_OPERATOR_PASSWORD_HASH` (from `python -m linkedia hash-password`) and `LIA_COOKIE_SECURE=false`; the news search also needs `PERPLEXITY_API_KEY`.
 
 ### Useful commands
 
@@ -231,7 +245,8 @@ Before pushing, run `ruff check .`, `python -m pytest` and, in `frontend/`, `npm
 - **Domain**: `linkedia/domain/` is pure — no network, files or imports from the rest of the package. Changing a formula, a time convention or the precedent rules means bumping `METHOD_VERSION` and updating the Methodology page and the tests.
 - **Errors**: provider failures are `ProviderUnavailable` and are never turned into empty lists or zeros; missing values stay `null` with a reason.
 - **Frontend**: view state lives in the URL (`useUrlState`); definitions shared by charts and the Methodology page are in `src/content/glossary.js`; colours come from tokens so both themes keep their contrast.
-- **AI**: paid calls happen only through `POST /api/analyses/:id/summary` with `confirm_cost`, by a signed-in operator, after a budget reservation — never in tests, `seed` or `init`.
+- **News search**: it is a core capability and must not be replaced by manual entry. URLs, sources and dates come only from the provider's results; the event date, the publication date and the retrieval time stay separate.
+- **Paid calls**: every one goes through `run_paid` (`linkedia/services/paid_calls.py`), which reserves the cost before the request; a provider or model without a verified price in `PRICING` is never called. Paid calls happen only on an explicit operator action — never in tests, `seed` or `init`.
 - User-facing text and code comments are in Italian. Architecture and API contracts are in [docs/architecture.md](docs/architecture.md), decisions in [docs/decisions/](docs/decisions/).
 
 ## Known limitations
@@ -241,16 +256,18 @@ Before pushing, run `ruff check .`, `python -m pytest` and, in `frontend/`, `npm
 - **Unofficial price source**: the Yahoo endpoint is public but not an official API; gaps and errors are flagged, never filled.
 - **Reference sources**: catalogue sources are encyclopedia entries and official statements, not original reports from the time.
 - **Market hours**: early closes and historical changes of closing time (except Tokyo 2024) are not modelled; approximate event times can shift the base session when they fall near a close.
-- **Spend control is applicative**: it relies on the price table and on the usage reported by the provider; keep a low prepaid balance on the DeepSeek account as an independent limit.
+- **News coverage**: results depend on the provider's index and ranking; older dates may have fewer sources of the time, events are checked only on short excerpts, and some articles on the same fact can still appear as separate cards. Event titles are the best-ranked headline unless the DeepSeek extraction is enabled.
+- **Spend control is applicative**: it relies on the price table and on the usage reported by the providers; keep low prepaid balances on the Perplexity and DeepSeek accounts, with automatic top-up disabled, as an independent limit.
 - **No out-of-sample validation**: semantic similarity and forecasting models are deliberately out of scope until the method can be evaluated.
 
 ## Project structure
 
 ```
 linkedia/      Python package: domain, providers, storage, services, api, cli, data/events.json
-frontend/      React app: pages, features/analysis, components, styles, tests
+frontend/      React app: pages, features/news, features/analysis, components, lib, styles, tests
 tests/         pytest suites (offline) and the optional external smoke test
-docs/          architecture, decisions, refactoring plan, images, history of the first prototype
+docs/          architecture, decisions, deployment and security, refactoring plan, images, history
+Dockerfile, docker-entrypoint.sh, railway.json   production image and Railway configuration
 ```
 
 ## Author
