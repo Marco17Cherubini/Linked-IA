@@ -441,8 +441,12 @@ def draft_event(group: list[NewsResult], params: SearchParams) -> EventDraft:
         in_range = [d for d in dates if params.start <= d <= params.end]
         event_date, basis = (min(in_range) if in_range else params.start), "first_publication"
         flags.append("date_estimated")
-    known = [r.published_on for r in group if r.published_on]
-    if known and (max(known) - min(known)).days > 30 and contemporary:
+    # Ambiguità: in un intervallo, fonti dell'epoca pubblicate in giorni lontani tra loro possono
+    # riferirsi a fatti diversi. Le ricostruzioni successive non contano: la loro data di
+    # pubblicazione non dice nulla sul giorno dell'evento.
+    contemporary_dates = [r.published_on for r in contemporary if r.published_on]
+    if params.start != params.end and contemporary_dates and \
+            (max(contemporary_dates) - min(contemporary_dates)).days > CONTEMPORARY_LAG_DAYS:
         flags.append("date_ambiguous")
     if not contemporary:
         flags.append("retrospective_only")

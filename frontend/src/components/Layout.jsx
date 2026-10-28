@@ -36,8 +36,8 @@ export default function Layout({ meta }) {
               ))}
               {meta?.features?.create && auth.authenticated && (
                 <li>
-                  <NavLink to="/new" className="nav__link nav__link--cta">
-                    Nuova analisi
+                  <NavLink to="/ricerca" className="nav__link nav__link--cta">
+                    Ricerca notizie
                   </NavLink>
                 </li>
               )}

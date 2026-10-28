@@ -6,7 +6,7 @@ import { formatDateTime } from '../lib/format.js'
 
 // Solo percorsi interni: un parametro "next" non può portare fuori dal sito.
 function safeNext(value) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/new'
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/ricerca'
 }
 
 export default function LoginPage({ meta }) {

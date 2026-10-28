@@ -14,6 +14,7 @@ const ArchivePage = lazy(() => import('./pages/ArchivePage.jsx'))
 const MethodologyPage = lazy(() => import('./pages/MethodologyPage.jsx'))
 const NewAnalysisPage = lazy(() => import('./pages/NewAnalysisPage.jsx'))
 const LoginPage = lazy(() => import('./pages/LoginPage.jsx'))
+const NewsSearchPage = lazy(() => import('./features/news/NewsSearchPage.jsx'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
 const CookiePage = lazy(() => import('./pages/CookiePage.jsx'))
 
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="archive" element={meta.data ? <ArchivePage meta={meta.data} /> : <Skeleton />} />
             <Route path="methodology" element={<MethodologyPage meta={meta.data} />} />
             <Route path="new" element={meta.data ? <NewAnalysisPage meta={meta.data} /> : <Skeleton />} />
+            <Route path="ricerca" element={meta.data ? <NewsSearchPage meta={meta.data} /> : <Skeleton />} />
             <Route path="accesso" element={<LoginPage meta={meta.data} />} />
             <Route path="privacy" element={<PrivacyPage meta={meta.data} />} />
             <Route path="cookie" element={<CookiePage meta={meta.data} />} />

@@ -84,6 +84,11 @@ export const api = {
   rerun: (eventId) => request(`/events/${encodeURIComponent(eventId)}/analyses`, { method: 'POST', body: {} }),
   createEvent: (payload) => request('/events', { method: 'POST', body: payload }),
   requestSummary: (id, body) => request(`/analyses/${encodeURIComponent(id)}/summary`, { method: 'POST', body }),
+  startNewsSearch: (body) => request('/news/searches', { method: 'POST', body }),
+  newsSearch: (id, opts) => request(`/news/searches/${encodeURIComponent(id)}`, opts),
+  recentNewsSearches: (opts) => request('/news/searches', opts),
+  analyzeNewsEvent: (id, idx) =>
+    request(`/news/searches/${encodeURIComponent(id)}/events/${Number(idx)}/analyze`, { method: 'POST', body: {} }),
 }
 
 function clean(params = {}) {

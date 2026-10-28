@@ -20,7 +20,7 @@ export default function BudgetPanel({ refreshKey = 0 }) {
   return (
     <section className="panel budget" aria-labelledby="budget-title">
       <h2 id="budget-title" className="panel__title">
-        Budget chiamate IA · ultime {data.window_hours} ore
+        Budget chiamate a pagamento · ultime {data.window_hours} ore
       </h2>
       <dl className="budget__grid">
         <div>

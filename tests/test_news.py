@@ -382,3 +382,24 @@ def test_injected_instructions_in_sources_are_inert(settings):
     assert body["events"] and body["events"][0]["title"] == "Market news alert(1)"
     # Il modello ha ricevuto il testo solo come dati e non ha strumenti né chiavi.
     assert llm.calls == 1
+
+
+def test_later_reconstructions_do_not_make_the_date_ambiguous():
+    params = SearchParams(date(2008, 9, 15), date(2008, 9, 15))
+    contemporary = accept_result(CONTEMPORARY[0], kind="contemporary", rank=0, idx=0, params=params,
+                                 retrieved_on=date(2026, 10, 28))[0]
+    later = accept_result(RETROSPECTIVE[0], kind="retrospective", rank=1, idx=1, params=params,
+                          retrieved_on=date(2026, 10, 28))[0]
+    assert "date_ambiguous" not in draft_event([contemporary, later], params).flags
+
+
+def test_distant_contemporary_reports_in_a_range_are_flagged():
+    params = SearchParams(date(2008, 9, 10), date(2008, 9, 16))
+    today = date(2026, 10, 28)
+    early = accept_result(article("https://a.org/x", "Bank collapse fears grow", "2008-09-10"),
+                          kind="contemporary", rank=0, idx=0, params=params, retrieved_on=today)[0]
+    late = accept_result(article("https://b.org/y", "Bank collapse fears grow", "2008-09-16"),
+                         kind="contemporary", rank=1, idx=1, params=params, retrieved_on=today)[0]
+    draft = draft_event([early, late], params)
+    assert {"date_ambiguous", "date_estimated"} <= set(draft.flags)
+    assert draft.event_date == date(2008, 9, 10)

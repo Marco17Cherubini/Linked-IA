@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import BudgetPanel from '../components/BudgetPanel.jsx'
 import { Notice } from '../components/ui.jsx'
 import { api } from '../lib/api.js'
@@ -45,18 +45,20 @@ const EMPTY_SOURCE = { url: '', publisher: '', title: '', kind: 'news' }
 
 export default function NewAnalysisPage({ meta }) {
   const navigate = useNavigate()
+  // Precompilazione facoltativa da una scheda della ricerca automatica (correzione manuale).
+  const prefill = useLocation().state?.prefill
   const auth = useAuth()
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    category: meta.categories[0].id,
-    tags: '',
-    date: '',
+  const [form, setForm] = useState(() => ({
+    title: prefill?.title ?? '',
+    description: prefill?.description ?? '',
+    category: prefill?.category ?? meta.categories[0].id,
+    tags: prefill?.tags?.join(', ') ?? '',
+    date: prefill?.date ?? '',
     time: '',
     offset: '+00:00',
     precision: 'approximate',
-    sources: [{ ...EMPTY_SOURCE }],
-  })
+    sources: prefill?.sources?.length ? prefill.sources.slice(0, 5).map((s) => ({ ...EMPTY_SOURCE, ...s })) : [{ ...EMPTY_SOURCE }],
+  }))
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
 
@@ -92,11 +94,16 @@ export default function NewAnalysisPage({ meta }) {
   return (
     <div className="page narrow">
       <header className="page-header">
-        <h1>Nuova analisi</h1>
+        <h1>Inserimento manuale</h1>
         <p className="page-header__lead">
-          Descrivi un evento già avvenuto e indica le fonti. Il calcolo scarica prezzi gratuiti e non usa servizi IA: la
-          sintesi IA si richiede a parte, dopo il calcolo.
+          Percorso secondario per casi che la <Link to="/ricerca">ricerca automatica per data</Link> non trova o descrive in
+          modo ambiguo. Il calcolo scarica prezzi gratuiti e non usa servizi IA: la sintesi IA si richiede a parte.
         </p>
+        {prefill && (
+          <Notice tone="info" title="Dati precompilati dalla ricerca">
+            Controlla e correggi i campi: l'analisi partirà con i valori che confermi.
+          </Notice>
+        )}
       </header>
 
       {auth.status === 'loading' ? null : !auth.authenticated ? (
