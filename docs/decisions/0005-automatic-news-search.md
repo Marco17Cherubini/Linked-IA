@@ -71,3 +71,20 @@ Insuccessi e limiti osservati:
 - Lingua: filtro `search_language_filter` (inglese, italiano) nella richiesta e controllo lato server dei titoli in alfabeti non latini (`other_language`).
 - Categoria: parole chiave solo come parole intere, titoli con peso triplo, voto dell'intero gruppo, vantaggio alla categoria scelta come filtro.
 - `max_results` portato a 20: il provider lo applica all'intera richiesta, e il costo è per richiesta.
+
+### Seconda verifica reale (28 ottobre 2026, regole `news-v3`)
+
+Stesse due date, modalità `auto`, senza estrazione IA. Costo di questa verifica 0,020 USD; spesa complessiva delle prove reali **0,060 USD** su 0,25 autorizzati (12 richieste, nessuna incerta).
+
+| Misura | Lehman, 15/09/2008 | Ucraina, 24/02/2022 |
+|---|---|---|
+| Latenza | 4,3 s | 4,3 s |
+| Risultati utili (dopo le esclusioni) | 29 (20 dell'epoca) | 27 (20 dell'epoca) |
+| Esclusi | 11 pagine indice | 12 pagine indice, 1 duplicato |
+| Risultati pertinenti | 25/29 | 25/27 |
+| Schede evento | 9 (prima 16) | 9 (prima 14) |
+| Evento principale | 20 risultati, 18 fonti indipendenti, «Crisi finanziaria» | 19 risultati, 14 fonti indipendenti, «Conflitto geopolitico» |
+
+L'analisi avviata dall'evento principale di Lehman è riuscita (seduta base 12/09/2008, S&P 500 −4,71 % alla prima seduta). Non ha precedenti perché il catalogo, prima del 2008, contiene solo l'11 settembre, l'Iraq e Katrina: è un limite del catalogo, non della ricerca.
+
+Limiti residui: alcuni articoli sullo stesso fatto restano schede singole; il titolo dell'evento è quello dell'articolo meglio classificato tra le fonti dell'epoca (un titolo sintetico richiede l'estrazione con DeepSeek); le etichette proposte dalle parole chiave includono a volte termini estranei citati negli estratti.
