@@ -448,3 +448,83 @@ def test_failed_analysis_can_be_restarted_from_the_card(settings):
 def test_api_key_is_only_sent_over_https(settings):
     app = news_app(settings, perplexity_base_url="http://api.perplexity.ai")
     assert client_for(app).get("/api/meta").get_json()["features"]["news_search"] is False
+
+
+# --- Regole news-v2, tarate sulla verifica reale del 28/10/2026 (testi sintetici) -------------
+
+def _accept(raw, kind="contemporary", params=None, idx=0):
+    params = params or SearchParams(date(2008, 9, 15), date(2008, 9, 15))
+    return accept_result(raw, kind=kind, rank=idx, idx=idx, params=params, retrieved_on=date(2026, 10, 28))
+
+
+@pytest.mark.parametrize("title", [
+    "What Happened on September 15, 2008", "On This Day in History - September 15",
+    "Top news by an agency | Pagina 22", "Headlines for February 24, 2022", "24 Febbraio 2022",
+    "Portal:Current events/2008 September 15", "Timeline: the crisis as it happened",
+])
+def test_index_pages_are_not_events(title):
+    result, reason = _accept(article("https://x.org/a", title, "2008-09-15"), kind="retrospective")
+    assert result is None and reason == "index_page"
+
+
+@pytest.mark.parametrize("title", ["米国株式市場は続伸", "美股盘前 恐慌指数飙升", "एशियाई शेयरों में गिरावट"])
+def test_other_languages_are_excluded(title):
+    result, reason = _accept(article("https://x.org/a", title, "2008-09-15"))
+    assert result is None and reason == "other_language"
+
+
+C = "contemporary"
+
+
+def _group(items, params):
+    results = [_accept(a, kind=k, params=params, idx=i)[0] for i, (k, a) in enumerate(items)]
+    return cluster([r for r in results if r])
+
+
+def test_different_headlines_on_the_same_fact_are_grouped():
+    params = SearchParams(date(2008, 9, 15), date(2008, 9, 15))
+    rows = [
+        ("Wall Street rallies on hopes of AIG rescue", "2008-09-16",
+         "Investors weighed the Lehman Brothers bankruptcy and the AIG rescue talks."),
+        ("Toronto shares slide as Lehman collapses", "2008-09-15",
+         "The Lehman Brothers bankruptcy and AIG troubles hit banks."),
+        ("Stocks close higher on Fed, Lehman and AIG", "2008-09-16",
+         "Lehman Brothers bankruptcy, AIG and the Fed drove the session."),
+        ("Bank of America agrees to buy Merrill Lynch", "2008-09-15",
+         "Bank of America announced the acquisition of Merrill Lynch for 50 billion."),
+    ]
+    groups = _group([(C, article(f"https://s{i}.org/x", *row)) for i, row in enumerate(rows)], params)
+    assert sorted(len(g) for g in groups) == [1, 3]
+    lehman = draft_event(max(groups, key=len), params)
+    assert lehman.independent_sources == 3 and "single_source" not in lehman.flags
+    assert lehman.category == "financial_crisis"
+
+
+def test_country_conflict_headlines_are_grouped_and_classified():
+    params = SearchParams(date(2022, 2, 24), date(2022, 2, 24))
+    rows = [
+        ("Indian benchmarks sink as Russia attacks Ukraine", "2022-02-24",
+         "Russia launched an attack on Ukraine; President Biden promised sanctions."),
+        ("Asia shares mixed as investors assess the Ukraine war", "2022-02-25",
+         "Russia invaded Ukraine; Biden announced sanctions; oil prices rose."),
+        ("US stocks rebound despite Russian invasion", "2022-02-25",
+         "Biden unveiled sanctions after Russia invaded Ukraine; covid rules eased."),
+    ]
+    groups = _group([(C, article(f"https://s{i}.org/x", *row)) for i, row in enumerate(rows)], params)
+    assert len(groups) == 1
+    assert draft_event(groups[0], params).category == "geopolitical_conflict"
+
+
+def test_title_keywords_outweigh_incidental_snippet_mentions():
+    params = SearchParams(date(2008, 9, 15), date(2008, 9, 15))
+    result = _accept(article("https://a.org/1", "Asian markets drop after Wall Street turmoil", "2008-09-16",
+                             "Oil and crude prices were also lower."), params=params)[0]
+    assert draft_event([result], params).category == "financial_crisis"
+
+
+def test_provider_request_asks_for_more_results_in_supported_languages():
+    session = FakeSession(FakeResponse(200, {"results": []}))
+    PerplexitySearchClient("k", session=session).search(["q"], published_after=date(2008, 9, 15),
+                                                        published_before=None)
+    body = session.calls[0][1]["json"]
+    assert body["max_results"] == 20 and body["search_language_filter"] == ["en", "it"]

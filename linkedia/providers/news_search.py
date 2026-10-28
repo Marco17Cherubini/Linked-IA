@@ -14,13 +14,16 @@ from typing import Protocol
 
 import requests
 
+from ..domain.news import LANGUAGES
 from ..errors import ProviderUnavailable
 from .http import new_session
 from .llm import _never_sent
 
 log = logging.getLogger(__name__)
 
-MAX_RESULTS_PER_QUERY = 8
+# Il provider applica max_results all'intera richiesta (verificato in produzione): si usa il
+# massimo documentato, a parità di costo perché la tariffa è per richiesta.
+MAX_RESULTS_PER_QUERY = 20
 MAX_TOKENS_PER_PAGE = 256
 MAX_RESULTS_PER_RESPONSE = 60
 
@@ -56,6 +59,7 @@ class PerplexitySearchClient:
             "query": list(queries),
             "max_results": MAX_RESULTS_PER_QUERY,
             "max_tokens_per_page": MAX_TOKENS_PER_PAGE,
+            "search_language_filter": list(LANGUAGES),
             "search_after_date_filter": _us_date(published_after),
         }
         if published_before is not None:

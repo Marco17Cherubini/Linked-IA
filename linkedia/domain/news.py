@@ -29,7 +29,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from .events import CATEGORIES
 
-NORMALIZATION_VERSION = "news-v1"
+NORMALIZATION_VERSION = "news-v2"
 MODES = ("auto", "contemporary", "retrospective")
 MAX_RANGE_DAYS = 7
 CONTEMPORARY_LAG_DAYS = 2
@@ -40,6 +40,12 @@ MAX_TITLE = 160
 MAX_DESCRIPTION = 600
 MAX_SNIPPET = 500
 CLUSTER_SIMILARITY = 0.5
+# Due risultati descrivono lo stesso fatto se condividono abbastanza termini distintivi (nomi di
+# persone, aziende, Paesi), esclusi quelli generici del linguaggio di mercato.
+SHARED_TERMS_MIN = 3
+SHARED_TERMS_OVERLAP = 0.4
+LANGUAGES = ("en", "it")
+MIN_LATIN_SHARE = 0.6
 
 _MONTHS_EN = ("January", "February", "March", "April", "May", "June", "July", "August",
               "September", "October", "November", "December")
@@ -56,12 +62,33 @@ _STOPWORDS = frozenset(
 
 # Parole chiave → categoria. Servono solo a proporre una categoria quando non è disponibile
 # un'estrazione strutturata; la scelta è sempre visibile e correggibile.
+# Termini generici del linguaggio di mercato e di calendario: non distinguono un fatto da un altro.
+_GENERIC = frozenset(
+    "stock stocks market markets share shares equity equities index indices points pts percent per "
+    "cent investor investors trading traders wall street dow jones nasdaq sensex nifty ftse dax "
+    "nikkei close closed closes closing higher lower rise rises rose fall falls fell drop drops "
+    "dropped gain gains loss losses day days week today yesterday tomorrow monday tuesday wednesday "
+    "thursday friday saturday sunday january february march april june july august september "
+    "october november december gennaio febbraio marzo aprile maggio giugno luglio agosto settembre "
+    "ottobre novembre dicembre year years report reports highlights session sessions price prices "
+    "global world asia asian europe european financial finance business economy economic "
+    "notizie oggi borsa borse mercato mercati".split()
+)
+
+# Pagine indice e cronologie: elencano molti fatti, non sono un evento.
+_INDEX_PAGE = re.compile(
+    r"\b(on this day|this day in history|today in history|what happened on|headlines for|"
+    r"top news|current events|daily (business )?briefing|news (summary|roundup|round-up)|"
+    r"timeline|cronologia|accadde oggi|pagina \d+|page \d+)\b", re.I)
+
 _CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "geopolitical_conflict": ("war", "invasion", "invade", "military", "missile", "troops", "attack",
-                              "guerra", "invasione", "militare", "conflict", "sanction", "sanzioni"),
+                              "guerra", "invasione", "militare", "conflict", "sanction", "sanzioni",
+                              "russia", "ukraine", "ucraina", "putin", "kremlin", "nato"),
     "terrorism": ("terror", "terrorist", "bombing", "hijack", "attentato", "terrorismo"),
     "financial_crisis": ("bankruptcy", "collapse", "bailout", "default", "crisis", "fallimento",
-                         "bank run", "insolvency", "crash", "lehman"),
+                         "bank run", "insolvency", "crash", "lehman", "turmoil", "meltdown", "rescue",
+                         "chapter 11", "bank failure", "aig", "merrill"),
     "monetary_policy": ("federal reserve", "fed ", "interest rate", "rate cut", "rate hike", "ecb",
                         "central bank", "bce", "tassi", "quantitative easing", "boj"),
     "political": ("election", "referendum", "president", "parliament", "elezioni", "governo",
@@ -315,6 +342,10 @@ def accept_result(raw: dict, *, kind: str, rank: int, idx: int, params: SearchPa
     title = _plain(raw.get("title"))[:MAX_TITLE]
     if not title:
         return None, "missing_title"
+    if _latin_share(title) < MIN_LATIN_SHARE:
+        return None, "other_language"
+    if _INDEX_PAGE.search(title) or _is_date_only(title):
+        return None, "index_page"
     published = parse_provider_date(raw.get("date"))
     if published and published > retrieved_on:
         published = None  # data nel futuro: non attendibile
@@ -330,6 +361,20 @@ def accept_result(raw: dict, *, kind: str, rank: int, idx: int, params: SearchPa
                       publisher=publisher_of(url), published_on=published,
                       last_updated=parse_provider_date(raw.get("last_updated")), kind=kind,
                       rank=rank), None
+
+
+def _latin_share(text: str) -> float:
+    letters = [ch for ch in text if ch.isalpha()]
+    if not letters:
+        return 0.0
+    latin = sum(1 for ch in letters if "LATIN" in unicodedata.name(ch, ""))
+    return latin / len(letters)
+
+
+def _is_date_only(title: str) -> bool:
+    """Titoli come «24 Febbraio 2022»: pagine di archivio di un giorno, non articoli."""
+    words = [t for t in _TOKEN.findall(title.lower()) if not t.isdigit()]
+    return len([w for w in words if w not in _GENERIC and w not in _STOPWORDS]) == 0
 
 
 def dedupe(results: list[NewsResult]) -> list[NewsResult]:
@@ -355,13 +400,29 @@ def _similarity(a: frozenset[str], b: frozenset[str]) -> float:
     return len(a & b) / len(a | b)
 
 
-def cluster(results: list[NewsResult]) -> list[list[NewsResult]]:
-    """Raggruppa i risultati che descrivono la stessa notizia (titoli molto simili).
+def _salient(r: NewsResult) -> frozenset[str]:
+    """Termini distintivi di titolo ed estratto: nomi e parole specifiche, non lessico di mercato."""
+    return frozenset(t for t in _tokens(f"{r.title} {r.snippet[:300]}")
+                     if t not in _GENERIC and not t.isdigit())
 
-    Unione per componenti connesse sulla somiglianza di Jaccard dei titoli; l'ordine dei gruppi
+
+def _same_story(a_title, b_title, a_terms, b_terms) -> bool:
+    if _similarity(a_title, b_title) >= CLUSTER_SIMILARITY:
+        return True
+    shared = a_terms & b_terms
+    smaller = min(len(a_terms), len(b_terms))
+    return len(shared) >= SHARED_TERMS_MIN and smaller > 0 and len(shared) / smaller >= SHARED_TERMS_OVERLAP
+
+
+def cluster(results: list[NewsResult]) -> list[list[NewsResult]]:
+    """Raggruppa i risultati che descrivono lo stesso fatto.
+
+    Due risultati sono collegati se i titoli sono molto simili oppure se titolo ed estratto
+    condividono abbastanza termini distintivi; i gruppi sono le componenti connesse. L'ordine
     segue il miglior rango del provider, mai i movimenti di mercato.
     """
     tokens = [_tokens(r.title) for r in results]
+    terms = [_salient(r) for r in results]
     parent = list(range(len(results)))
 
     def find(i: int) -> int:
@@ -372,7 +433,7 @@ def cluster(results: list[NewsResult]) -> list[list[NewsResult]]:
 
     for i in range(len(results)):
         for j in range(i + 1, len(results)):
-            if _similarity(tokens[i], tokens[j]) >= CLUSTER_SIMILARITY:
+            if _same_story(tokens[i], tokens[j], terms[i], terms[j]):
                 parent[find(j)] = find(i)
     groups: dict[int, list[NewsResult]] = {}
     for i, r in enumerate(results):
@@ -410,13 +471,28 @@ def mentions_date(text: str, day: date) -> bool:
     return any(re.search(p, lowered) for p in patterns)
 
 
-def guess_category(text: str, fallback: str | None) -> tuple[str, bool]:
-    lowered = f" {text.lower()} "
-    scores = {cat: sum(lowered.count(k) for k in words) for cat, words in _CATEGORY_KEYWORDS.items()}
+def guess_category(text: str, fallback: str | None, titles: str = "") -> tuple[str, bool]:
+    """Categoria più citata nel gruppo: i titoli contano tre volte gli estratti; la categoria
+    scelta dall'operatore come filtro, se presente, riceve un vantaggio."""
+    body, heads = text.lower(), titles.lower()
+
+    def hits(source: str, keyword: str) -> int:
+        # Parole intere: «turmoil» non deve contare come «oil».
+        return len(re.findall(_word(keyword), source))
+
+    scores = {cat: sum(hits(body, k) + 2 * hits(heads, k) for k in words)
+              for cat, words in _CATEGORY_KEYWORDS.items()}
+    if fallback in scores:
+        scores[fallback] += 2
     best = max(scores, key=scores.get)
-    if scores[best] > 0:
+    if scores[best] > (2 if fallback in scores else 0):
         return best, False
     return fallback or "political", fallback is None
+
+
+def _word(keyword: str) -> str:
+    """Espressione che trova la parola chiave solo come parola (o locuzione) intera."""
+    return r"\b" + re.escape(keyword.strip()) + r"\b"
 
 
 def guess_tags(text: str, category: str, region: str | None) -> tuple[str, ...]:
@@ -424,7 +500,7 @@ def guess_tags(text: str, category: str, region: str | None) -> tuple[str, ...]:
     tags = [category.replace("_", "-")]
     for words in _CATEGORY_KEYWORDS.values():
         for word in words:
-            if word.strip() in lowered:
+            if re.search(_word(word), lowered):
                 slug = re.sub(r"[^a-z0-9]+", "-", word.strip().lower()).strip("-")
                 if slug and slug not in tags:
                     tags.append(slug)
@@ -469,7 +545,7 @@ def draft_event(group: list[NewsResult], params: SearchParams) -> EventDraft:
     if syndicated:
         flags.append("syndicated_copies")
     flags.append("snippet_only")
-    category, defaulted = guess_category(text, params.category)
+    category, defaulted = guess_category(text, params.category, " ".join(r.title for r in group))
     if defaulted:
         flags.append("category_default")
     return EventDraft(

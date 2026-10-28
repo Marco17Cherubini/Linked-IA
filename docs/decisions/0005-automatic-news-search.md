@@ -63,3 +63,11 @@ Insuccessi e limiti osservati:
 - **Pagine indice tra le retrospettive** («On this day», «Headlines for…», «Top news … Pagina 22»): non sono eventi, e la loro data di pubblicazione dichiarata coincide spesso con la data cercata, quindi non è attendibile.
 - **Lingue miste** tra le fonti dell'epoca (giapponese, cinese, hindi da investing.com): manca un filtro di lingua.
 - **Categorie da parole chiave imprecise** («energy» per un articolo sui mercati asiatici, «pandemic» per uno sull'Ucraina), con effetto sui precedenti: l'analisi Lehman ha 0 precedenti perché la scheda è stata classificata «monetary_policy».
+
+### Correzioni dopo la verifica (regole `news-v2`)
+
+- Raggruppamento: oltre ai titoli simili, si collegano i risultati che condividono almeno 3 termini distintivi di titolo ed estratto (nomi di persone, aziende, Paesi), escluso il lessico generico di mercato e di calendario.
+- Pagine indice e cronologie («On this day», «Headlines for…», «Pagina N», titoli fatti solo di una data) escluse con motivo `index_page`.
+- Lingua: filtro `search_language_filter` (inglese, italiano) nella richiesta e controllo lato server dei titoli in alfabeti non latini (`other_language`).
+- Categoria: parole chiave solo come parole intere, titoli con peso triplo, voto dell'intero gruppo, vantaggio alla categoria scelta come filtro.
+- `max_results` portato a 20: il provider lo applica all'intera richiesta, e il costo è per richiesta.

@@ -31,6 +31,8 @@ export const EXCLUDED_TEXT = {
   outside_window: 'pubblicati fuori dalla finestra dell’epoca',
   published_before_event: 'pubblicati prima dell’evento',
   duplicate_url: 'duplicati',
+  index_page: 'pagine indice o cronologie (non sono eventi)',
+  other_language: 'in lingue diverse da italiano e inglese',
 }
 
 export const DATE_BASIS_TEXT = {
