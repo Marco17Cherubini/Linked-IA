@@ -46,6 +46,8 @@ class AnalysisService:
         self._today = today
         self.authorize = authorize
         self._failed_fetches: dict[str, float] = {}
+        # Inizio dell'intervallo già richiesto al provider, per mercato, con la data della richiesta.
+        self._requested: dict[str, tuple[str, str]] = {}
 
     # --- Eventi ---------------------------------------------------------------------------
 
@@ -95,9 +97,15 @@ class AnalysisService:
     def ensure_prices(self, market_id: str, start: date, end: date) -> None:
         """Scarica i prezzi solo se l'archivio non copre l'intervallo o non è aggiornato a oggi."""
         sync = self.store.price_sync(market_id)
+        today = utc_now()[:10]
         if sync:
-            covered = sync["first_date"] <= start.isoformat()
-            fresh = sync["last_date"] >= end.isoformat() or sync["fetched_at"][:10] == utc_now()[:10]
+            # Se il provider non ha sedute fino a `start` (serie che inizia più tardi), la
+            # copertura non sarà mai completa: basta averla già richiesta oggi da questo processo.
+            requested = self._requested.get(market_id)
+            covered = (sync["first_date"] <= start.isoformat()
+                       or (requested is not None and requested[1] == today
+                           and requested[0] <= start.isoformat()))
+            fresh = sync["last_date"] >= end.isoformat() or sync["fetched_at"][:10] == today
             if covered and fresh:
                 return
         failed_at = self._failed_fetches.get(market_id)
@@ -113,6 +121,7 @@ class AnalysisService:
             self._failed_fetches[market_id] = time.monotonic()
             raise
         self._failed_fetches.pop(market_id, None)
+        self._requested[market_id] = (start.isoformat(), today)
         if not bars:
             raise ProviderUnavailable(f"Nessun prezzo restituito per {MARKETS[market_id].name}")
         self.store.save_prices(market_id, bars, provider=self.market_data.name)

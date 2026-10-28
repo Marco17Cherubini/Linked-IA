@@ -237,3 +237,20 @@ def test_catalogue_is_valid_and_public():
     assert len({e.id for e in events}) == len(events)
     assert all(e.sources for e in events)
     assert all(e.public for e in events)
+
+
+class LateStartMarketData(FakeMarketData):
+    """Serie che inizia dopo la data richiesta: la copertura non è mai completa."""
+
+    def daily_bars(self, market, start, end):
+        return [b for b in super().daily_bars(market, start, end) if b.date.year >= 2019]
+
+
+def test_prices_are_not_downloaded_again_for_every_analysis(settings):
+    market = LateStartMarketData()
+    app = make_app(settings, market_data=market)
+    analysis = app.extensions["lia"]["analysis"]
+    analysis.import_catalogue()
+    for event_id in ("sept11-attacks-2001", "iraq-invasion-2003", "lehman-bankruptcy-2008"):
+        analysis.request_analysis(event_id)
+    assert market.calls == len(MARKETS)
