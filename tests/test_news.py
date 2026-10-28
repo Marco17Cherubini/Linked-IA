@@ -106,7 +106,8 @@ def test_requests_respect_time_windows():
 
 def test_urls_are_normalized_and_unsafe_ones_rejected():
     assert normalize_url("https://www.Reuters.com/a/?utm_source=x&id=2#top") == "https://reuters.com/a?id=2"
-    for bad in ("javascript:alert(1)", "ftp://x.org/a", "https://user:pw@x.org/", "", None):
+    for bad in ("javascript:alert(1)", "ftp://x.org/a", "https://user:pw@x.org/", "", None,
+                "http://a.com:99999/x", "http://a.com:abc/x", "http://[::1]/x"):
         assert normalize_url(bad) is None
 
 

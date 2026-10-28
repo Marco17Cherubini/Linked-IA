@@ -32,6 +32,11 @@ CLI e API usano gli stessi servizi: non esiste una seconda pipeline.
 | `linkedia/services/summary.py` | sintesi IA: limiti, prompt, tentativi con riserva, validazione | idem |
 | `linkedia/services/budget.py` | prezzi verificati, costo massimo, prenotazione atomica, riconciliazione, blocco | idem |
 | `linkedia/services/auth.py` | hash Argon2id, sessioni opache, limiti ai tentativi | idem |
+| `linkedia/domain/news.py` | ricerca notizie: parametri, finestre temporali, URL, raggruppamento, avvertenze | `domain` |
+| `linkedia/providers/news_search.py` | Perplexity Search API, errori classificati | `errors` |
+| `linkedia/services/paid_calls.py` | unico esecutore delle chiamate a pagamento (riserva per tentativo) | `budget` |
+| `linkedia/services/news.py`, `news_extraction.py` | job di ricerca, cache, estrazione validata, avvio dell'analisi | tutto tranne `api`/`cli` |
+| `linkedia/storage/news_store.py` | ricerche, risultati normalizzati, schede evento | `storage` |
 | `linkedia/services/jobs.py` | esecutore in background (1 thread) o in linea | — |
 | `linkedia/api/` | rotte JSON, gestione errori, intestazioni di sicurezza, frontend statico | `services`, `storage`, `domain` |
 | `linkedia/cli.py` | `init`, `seed`, `analyze`, `events`, `set-public`, `hash-password`, `revoke-sessions`, `backup`, `serve` | `services`, `storage` |
@@ -76,6 +81,10 @@ Senza sessione sono visibili solo gli eventi con `public = 1` (catalogo curato).
 | `POST /api/auth/login` | `{password}` → cookie `__Host-lia_session`; 401 errata, 429 troppi tentativi |
 | `POST /api/auth/logout` | *operatore* · elimina la sessione sul server |
 | `GET /api/operator/budget` | *operatore* · confermato, riservato, incerto, residuo, blocco e possibile sblocco |
+| `POST /api/news/searches` | *operatore* · `{date}` oppure `{start, end}` (max 7 giorni), `mode`, `topic?`, `region?`, `category?` → 202 `{search_id}`; 200 se riusata dalla cache |
+| `GET /api/news/searches` | *operatore* · ricerche recenti |
+| `GET /api/news/searches/:id` | *operatore* · stato (`queued`, `running`, `succeeded`, `partial`, `empty`, `failed`), richieste, esclusioni, risultati, schede evento |
+| `POST /api/news/searches/:id/events/:idx/analyze` | *operatore* · crea l'evento privato e avvia l'analisi → `{event_id, analysis_id}` |
 
 Forma di `data` (un mercato):
 

@@ -266,8 +266,14 @@ def normalize_url(raw) -> str | None:
     if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
         return None
     host = parsed.hostname.lower().removeprefix("www.")
-    if parsed.port and parsed.port not in (80, 443):
-        host = f"{host}:{parsed.port}"
+    if ":" in host:
+        return None  # IPv6 letterale: non è una fonte giornalistica
+    try:
+        port = parsed.port
+    except ValueError:
+        return None  # porta non numerica o fuori intervallo
+    if port and port not in (80, 443):
+        host = f"{host}:{port}"
     query = urlencode([(k, v) for k, v in parse_qsl(parsed.query) if not _TRACKING.match(k)])
     path = re.sub(r"/amp/?$", "", parsed.path).rstrip("/") or "/"
     return urlunparse(("https" if parsed.scheme == "https" else "http", host, path, "", query, ""))

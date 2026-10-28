@@ -44,7 +44,7 @@ DNS: Hostinger (nameserver *.dns-parking.com) → record verso Railway
 
 ## 3. Budget e chiamate a pagamento
 
-Unico provider a pagamento: **DeepSeek** (sintesi IA). Yahoo Finance (prezzi) è gratuito ma esterno: richiede comunque la sessione e conta come job esterno.
+Provider a pagamento: **Perplexity Search API** (ricerca notizie, 0,005 USD per richiesta) e **DeepSeek** (estrazione facoltativa delle schede evento e sintesi IA). Yahoo Finance (prezzi) è gratuito ma esterno: richiede comunque la sessione e conta come job esterno. Tutte le chiamate a pagamento passano da `linkedia/services/paid_calls.py`.
 
 | Regola | Valore iniziale | Variabile |
 |---|---|---|
@@ -52,7 +52,9 @@ Unico provider a pagamento: **DeepSeek** (sintesi IA). Yahoo Finance (prezzi) è
 | Job esterni simultanei | 1 (controllo e inserimento nella stessa transazione) | — |
 | Pausa dopo un rifiuto | 60 minuti, persistente | `LIA_API_BLOCK_MINUTES` |
 | Sintesi per 24 ore | 20 | `LIA_AI_DAILY_LIMIT` |
-| Modelli ammessi | `deepseek-flash`, `deepseek-v4-pro` (prezzi di picco verificati il 2026-10-28) | `DEEPSEEK_MODEL` |
+| Modelli ammessi | `deepseek-flash`, `deepseek-v4-pro` (prezzi di picco verificati il 2026-10-28), Perplexity `search` (prezzo per richiesta) | `DEEPSEEK_MODEL` |
+| Costo massimo per ricerca | 0,05 USD (2 richieste × 2 tentativi + estrazione) | `LIA_NEWS_SEARCH_MAX_USD` |
+| Riuso di ricerche identiche | 6 ore (date degli ultimi 30 giorni), 30 giorni (date storiche) | — |
 
 Per ogni tentativo (anche i retry):
 
@@ -73,6 +75,7 @@ Quando cooldown e finestra lo consentono, il primo tentativo successivo riparte 
 - Dipende dalla correttezza della tabella prezzi e dall'utilizzo dichiarato dal provider: se DeepSeek cambia tariffe, aggiornare `PRICING` (data di verifica inclusa) prima di riattivare la sintesi. Si usano sempre le tariffe di picco.
 - Il calcolo del tetto in ingresso presume che un token copra almeno un byte UTF-8.
 - Non protegge da un uso della stessa chiave API fuori da LiA.
+- **Perplexity**: la documentazione pubblica descrive crediti acquistati e livelli d'uso, non tetti di spesa per chiave né ricariche automatiche. Tenere un credito basso e verificare nella console che la ricarica automatica sia disattivata.
 - **Limite esterno indipendente**: DeepSeek funziona a credito prepagato (termini del servizio); la documentazione pubblica non descrive tetti per chiave né ricariche automatiche. La protezione esterna efficace è mantenere sul conto un credito basso e una chiave usata solo da LiA. Va verificato dal titolare nella console DeepSeek che non sia attiva alcuna ricarica automatica.
 
 ### Costi separati
