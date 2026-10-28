@@ -139,7 +139,7 @@ I nameserver autorevoli sono quelli di Hostinger. Si modificano solo i record ri
 - A ogni avvio `init` salva una copia coerente (API di backup SQLite) in `/data/backups`, mantenendo le ultime 7. Manuale: `railway ssh` → `python -m linkedia backup`.
 - Backup del volume Railway (scheda *Backups* del servizio): programmazione giornaliera (conservata 6 giorni) e settimanale (27 giorni). Il ripristino crea un nuovo volume e va confermato con *Deploy*.
 - Ripristino da copia locale: fermare il servizio, sostituire `/data/lia.sqlite3` con la copia (e rimuovere `-wal`/`-shm`), riavviare.
-- Un rollback del codice non ripristina i dati: lo schema v2 resta compatibile in avanti; tornare a una versione precedente alla v2 richiede di ripristinare anche un backup precedente alla migrazione.
+- Un rollback del codice non ripristina i dati. Lo schema v3 (ricerca notizie, 28/10/2026) aggiunge tabelle e la colonna `sources.published_on`: il codice precedente inserisce in `sources` senza nominare le colonne e, su un database v3, non potrebbe più creare eventi. Per tornare a una versione precedente a `e1c47dc` occorre ripristinare anche la copia v2 salvata in `/data/backups` dall'avvio precedente alla migrazione (o un backup del volume). Le versioni da `e1c47dc` in poi leggono e scrivono correttamente sia v2 (migrata all'avvio) sia v3.
 
 ## 9. Registro delle operazioni di pubblicazione (28 ottobre 2026)
 
