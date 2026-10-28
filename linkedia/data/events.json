@@ -1,8 +1,9 @@
 {
-  "note": "Catalogo curato di eventi reali. Fonti di consultazione (Wikipedia) e fonti ufficiali; link verificati alla data accessed_on. Gli orari 'approximate' hanno un margine di incertezza di alcune ore.",
+  "note": "Catalogo curato di eventi reali: sono i casi dimostrativi pubblici (public: true). Fonti di consultazione (Wikipedia) e fonti ufficiali; link verificati alla data accessed_on. Gli orari 'approximate' hanno un margine di incertezza di alcune ore.",
   "events": [
     {
       "id": "sept11-attacks-2001",
+      "public": true,
       "title": "Attacchi dell'11 settembre negli Stati Uniti",
       "description": "Attacchi terroristici coordinati a New York e Washington. Le borse statunitensi restarono chiuse fino al 17 settembre 2001.",
       "category": "terrorism",
@@ -16,6 +17,7 @@
     },
     {
       "id": "iraq-invasion-2003",
+      "public": true,
       "title": "Inizio dell'invasione dell'Iraq",
       "description": "Una coalizione guidata dagli Stati Uniti avvia le operazioni militari contro l'Iraq.",
       "category": "geopolitical_conflict",
@@ -29,6 +31,7 @@
     },
     {
       "id": "hurricane-katrina-2005",
+      "public": true,
       "title": "L'uragano Katrina tocca terra in Louisiana",
       "description": "L'uragano raggiunge la costa del Golfo del Messico, con gravi danni a New Orleans e alle infrastrutture energetiche della regione.",
       "category": "natural_disaster",
@@ -42,6 +45,7 @@
     },
     {
       "id": "lehman-bankruptcy-2008",
+      "public": true,
       "title": "Fallimento di Lehman Brothers",
       "description": "Lehman Brothers presenta istanza di fallimento (Chapter 11), nella fase più acuta della crisi finanziaria globale.",
       "category": "financial_crisis",
@@ -55,6 +59,7 @@
     },
     {
       "id": "fed-zero-rates-2008",
+      "public": true,
       "title": "La Federal Reserve porta i tassi vicino allo zero",
       "description": "Il FOMC fissa l'obiettivo sui fed funds in un intervallo tra 0 e 0,25%.",
       "category": "monetary_policy",
@@ -68,6 +73,7 @@
     },
     {
       "id": "flash-crash-2010",
+      "public": true,
       "title": "Flash crash di Wall Street",
       "description": "In pochi minuti i principali indici statunitensi perdono e recuperano gran parte del valore durante la seduta.",
       "category": "financial_crisis",
@@ -81,6 +87,7 @@
     },
     {
       "id": "tohoku-earthquake-2011",
+      "public": true,
       "title": "Terremoto e tsunami del Tōhoku",
       "description": "Un terremoto di magnitudo 9 colpisce il Giappone nord-orientale; lo tsunami provoca anche l'incidente nucleare di Fukushima.",
       "category": "natural_disaster",
@@ -95,6 +102,7 @@
     },
     {
       "id": "us-credit-downgrade-2011",
+      "public": true,
       "title": "S&P declassa il debito degli Stati Uniti",
       "description": "Standard & Poor's riduce il rating del debito federale statunitense da AAA ad AA+, dopo la chiusura dei mercati.",
       "category": "financial_crisis",
@@ -108,6 +116,7 @@
     },
     {
       "id": "draghi-whatever-it-takes-2012",
+      "public": true,
       "title": "Draghi: «whatever it takes» per l'euro",
       "description": "Il presidente della BCE dichiara che la banca centrale farà tutto il necessario per preservare l'euro, nel pieno della crisi del debito sovrano.",
       "category": "monetary_policy",
@@ -121,6 +130,7 @@
     },
     {
       "id": "taper-tantrum-2013",
+      "public": true,
       "title": "Bernanke apre alla riduzione degli acquisti (taper tantrum)",
       "description": "Il presidente della Fed indica la possibile riduzione degli acquisti di titoli; i rendimenti obbligazionari salgono nelle settimane successive.",
       "category": "monetary_policy",
@@ -133,6 +143,7 @@
     },
     {
       "id": "crimea-annexation-2014",
+      "public": true,
       "title": "Annessione della Crimea alla Russia",
       "description": "La Russia firma il trattato di annessione della Crimea; Stati Uniti e Unione europea rispondono con sanzioni.",
       "category": "geopolitical_conflict",
@@ -145,6 +156,7 @@
     },
     {
       "id": "greek-referendum-2015",
+      "public": true,
       "title": "Referendum greco sul piano dei creditori",
       "description": "Gli elettori greci respingono le condizioni proposte dai creditori internazionali, con le banche del paese chiuse.",
       "category": "political",
@@ -157,6 +169,7 @@
     },
     {
       "id": "china-devaluation-2015",
+      "public": true,
       "title": "La Cina svaluta lo yuan",
       "description": "La banca centrale cinese modifica il meccanismo di fissazione del cambio e lo yuan si deprezza, in una fase di forte turbolenza dei mercati cinesi.",
       "category": "financial_crisis",
@@ -169,6 +182,7 @@
     },
     {
       "id": "paris-attacks-2015",
+      "public": true,
       "title": "Attentati di Parigi",
       "description": "Attacchi terroristici coordinati a Parigi e Saint-Denis nella sera di venerdì, dopo la chiusura delle borse europee.",
       "category": "terrorism",
@@ -182,6 +196,7 @@
     },
     {
       "id": "brexit-referendum-2016",
+      "public": true,
       "title": "Esito del referendum sulla Brexit",
       "description": "Lo spoglio notturno indica la vittoria del voto per l'uscita del Regno Unito dall'Unione europea.",
       "category": "political",
@@ -196,6 +211,7 @@
     },
     {
       "id": "us-election-2016",
+      "public": true,
       "title": "Esito delle presidenziali statunitensi 2016",
       "description": "Nella notte elettorale Donald Trump risulta vincitore delle elezioni presidenziali.",
       "category": "political",
@@ -209,6 +225,7 @@
     },
     {
       "id": "italy-referendum-2016",
+      "public": true,
       "title": "Referendum costituzionale italiano",
       "description": "Gli elettori respingono la riforma costituzionale; il presidente del Consiglio annuncia le dimissioni.",
       "category": "political",
@@ -221,6 +238,7 @@
     },
     {
       "id": "north-korea-nuclear-test-2017",
+      "public": true,
       "title": "Test nucleare nordcoreano",
       "description": "La Corea del Nord conduce il suo sesto test nucleare, il più potente fino a quel momento.",
       "category": "geopolitical_conflict",
@@ -233,6 +251,7 @@
     },
     {
       "id": "us-china-tariffs-2018",
+      "public": true,
       "title": "Gli Stati Uniti annunciano dazi sulle importazioni cinesi",
       "description": "Il presidente statunitense firma un memorandum che avvia dazi su beni importati dalla Cina, primo passo della guerra commerciale.",
       "category": "trade",
@@ -245,6 +264,7 @@
     },
     {
       "id": "soleimani-killing-2020",
+      "public": true,
       "title": "Uccisione del generale iraniano Soleimani",
       "description": "Un attacco statunitense con drone presso l'aeroporto di Baghdad uccide il comandante iraniano Qasem Soleimani.",
       "category": "geopolitical_conflict",
@@ -258,6 +278,7 @@
     },
     {
       "id": "italy-covid-outbreak-2020",
+      "public": true,
       "title": "Focolai di COVID-19 nel Nord Italia",
       "description": "Il governo isola i comuni dei primi focolai in Lombardia e Veneto: è il primo grande focolaio in Europa.",
       "category": "pandemic",
@@ -270,6 +291,7 @@
     },
     {
       "id": "oil-price-war-2020",
+      "public": true,
       "title": "Guerra dei prezzi del petrolio tra Russia e Arabia Saudita",
       "description": "Dopo il mancato accordo OPEC+, l'Arabia Saudita annuncia sconti e aumenti di produzione; il petrolio crolla all'apertura successiva.",
       "category": "energy",
@@ -283,6 +305,7 @@
     },
     {
       "id": "who-pandemic-2020",
+      "public": true,
       "title": "L'OMS dichiara la pandemia di COVID-19",
       "description": "L'Organizzazione mondiale della sanità definisce la diffusione del COVID-19 una pandemia.",
       "category": "pandemic",
@@ -296,6 +319,7 @@
     },
     {
       "id": "fed-emergency-cut-2020",
+      "public": true,
       "title": "Taglio d'emergenza dei tassi della Federal Reserve",
       "description": "Di domenica, la Fed porta i tassi tra 0 e 0,25% e annuncia acquisti di titoli in risposta alla pandemia.",
       "category": "monetary_policy",
@@ -309,6 +333,7 @@
     },
     {
       "id": "pfizer-vaccine-2020",
+      "public": true,
       "title": "Pfizer e BioNTech annunciano l'efficacia del vaccino",
       "description": "I risultati preliminari della fase 3 indicano un'efficacia superiore al 90% del vaccino contro il COVID-19.",
       "category": "pandemic",
@@ -322,6 +347,7 @@
     },
     {
       "id": "russia-invades-ukraine-2022",
+      "public": true,
       "title": "La Russia invade l'Ucraina",
       "description": "All'alba del 24 febbraio la Russia avvia un'invasione su larga scala dell'Ucraina; seguono sanzioni occidentali e forti rialzi dei prezzi energetici.",
       "category": "geopolitical_conflict",
@@ -335,6 +361,7 @@
     },
     {
       "id": "fed-first-hike-2022",
+      "public": true,
       "title": "La Fed avvia il ciclo di rialzi dei tassi",
       "description": "Il FOMC alza i tassi di 0,25 punti, primo rialzo dal 2018, per contrastare l'inflazione.",
       "category": "monetary_policy",
@@ -348,6 +375,7 @@
     },
     {
       "id": "svb-collapse-2023",
+      "public": true,
       "title": "Crollo di Silicon Valley Bank",
       "description": "Le autorità californiane chiudono Silicon Valley Bank e ne affidano la gestione alla FDIC, dopo una corsa agli sportelli.",
       "category": "financial_crisis",
@@ -360,6 +388,7 @@
     },
     {
       "id": "credit-suisse-ubs-2023",
+      "public": true,
       "title": "UBS acquisisce Credit Suisse",
       "description": "Con il sostegno delle autorità svizzere, UBS annuncia di domenica l'acquisizione di emergenza di Credit Suisse.",
       "category": "financial_crisis",
@@ -372,6 +401,7 @@
     },
     {
       "id": "hamas-attack-israel-2023",
+      "public": true,
       "title": "Attacco di Hamas contro Israele",
       "description": "Il 7 ottobre, di sabato, Hamas lancia un attacco su larga scala contro Israele; segue la guerra a Gaza.",
       "category": "geopolitical_conflict",
@@ -384,6 +414,7 @@
     },
     {
       "id": "iran-strikes-israel-2024",
+      "public": true,
       "title": "Attacco diretto dell'Iran contro Israele",
       "description": "Di sabato l'Iran lancia droni e missili contro Israele, primo attacco diretto dal proprio territorio.",
       "category": "geopolitical_conflict",
@@ -396,6 +427,7 @@
     },
     {
       "id": "us-election-2024",
+      "public": true,
       "title": "Esito delle presidenziali statunitensi 2024",
       "description": "Nella notte elettorale Donald Trump risulta vincitore delle elezioni presidenziali.",
       "category": "political",
@@ -409,6 +441,7 @@
     },
     {
       "id": "liberation-day-tariffs-2025",
+      "public": true,
       "title": "Dazi del «Liberation Day»",
       "description": "Dopo la chiusura di Wall Street, il presidente statunitense annuncia dazi generalizzati sulle importazioni da quasi tutti i paesi.",
       "category": "trade",
@@ -422,6 +455,7 @@
     },
     {
       "id": "twelve-day-war-2025",
+      "public": true,
       "title": "Israele attacca l'Iran: inizio della guerra dei dodici giorni",
       "description": "Israele colpisce siti militari e nucleari iraniani; segue un conflitto aperto di circa due settimane.",
       "category": "geopolitical_conflict",

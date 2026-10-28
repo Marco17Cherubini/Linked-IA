@@ -6,7 +6,7 @@ import requests
 from linkedia.domain.markets import MARKETS
 from linkedia.errors import ProviderUnavailable
 from linkedia.providers.http import request_json
-from linkedia.providers.llm import DeepSeekClient
+from linkedia.providers.llm import BilledResponseError, DeepSeekClient
 from linkedia.providers.market_data import parse_chart_response
 
 
@@ -87,16 +87,43 @@ def test_request_json_gives_up():
         request_json(session, "GET", "u", provider="P", timeout=3, retries=2, backoff=0)
 
 
-def test_deepseek_invalid_content_is_an_error():
-    session = FakeSession([FakeResponse(200, {"choices": [{"message": {"content": "non json"}}]})])
-    client = DeepSeekClient("k", base_url="https://x", model="m", session=session)
-    with pytest.raises(ProviderUnavailable):
-        client.complete_json("s", "u", max_tokens=10)
+class FakePostSession(FakeSession):
+    def post(self, url, **kwargs):
+        return self.request("POST", url, **kwargs)
 
 
-def test_deepseek_parses_json_object():
+def deepseek(responses):
+    session = FakePostSession(responses)
+    return DeepSeekClient("k", base_url="https://x", model="deepseek-flash", session=session), session
+
+
+def test_deepseek_returns_content_and_usage_with_thinking_disabled():
     body = {"choices": [{"message": {"content": '{"headline": "x"}'}}], "usage": {"total_tokens": 5}}
-    session = FakeSession([FakeResponse(200, body)])
-    client = DeepSeekClient("k", base_url="https://x", model="m", session=session)
-    data, usage = client.complete_json("s", "u", max_tokens=10)
-    assert data == {"headline": "x"} and usage["total_tokens"] == 5
+    client, session = deepseek([FakeResponse(200, body)])
+    text, usage = client.chat("s", "u", max_tokens=10)
+    assert text == '{"headline": "x"}' and usage["total_tokens"] == 5
+    sent = session.calls[0]["json"]
+    assert sent["thinking"] == {"type": "disabled"} and sent["max_tokens"] == 10
+    assert len(session.calls) == 1  # un solo tentativo: i retry li decide il servizio
+
+
+@pytest.mark.parametrize("item, billing", [
+    (FakeResponse(429), "not_billed"),
+    (FakeResponse(402), "not_billed"),
+    (FakeResponse(500), "uncertain"),
+    (requests.ReadTimeout("lento"), "uncertain"),
+    (requests.ConnectTimeout("nessuna connessione"), "not_billed"),
+    (FakeResponse(200, None), "uncertain"),
+])
+def test_deepseek_errors_declare_billing_certainty(item, billing):
+    client, session = deepseek([item])
+    with pytest.raises(ProviderUnavailable) as info:
+        client.chat("s", "u", max_tokens=10)
+    assert info.value.billing == billing and len(session.calls) == 1
+
+
+def test_deepseek_malformed_200_is_billed_with_usage():
+    client, _ = deepseek([FakeResponse(200, {"choices": [], "usage": {"prompt_tokens": 3}})])
+    with pytest.raises(BilledResponseError) as info:
+        client.chat("s", "u", max_tokens=10)
+    assert info.value.usage == {"prompt_tokens": 3}

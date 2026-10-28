@@ -15,11 +15,11 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY linkedia/ linkedia/
 RUN pip install --no-cache-dir ".[deploy]" \
-    && useradd --create-home lia \
+    && useradd --create-home --uid 10001 lia \
     && mkdir -p /data && chown lia /data
 COPY --from=frontend /app/frontend/dist frontend/dist
-USER lia
-VOLUME ["/data"]
+COPY docker-entrypoint.sh /usr/local/bin/lia-start
+RUN chmod 755 /usr/local/bin/lia-start
 EXPOSE 8000
-# Un solo processo: i job in background vivono nel processo e il loro stato in SQLite.
-CMD ["gunicorn", "--workers", "1", "--threads", "8", "--bind", "0.0.0.0:8000", "linkedia.wsgi:app"]
+# Parte come root solo per sistemare i permessi del volume, poi passa all'utente `lia`.
+CMD ["/usr/local/bin/lia-start"]

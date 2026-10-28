@@ -1,14 +1,17 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import BudgetPanel from '../../components/BudgetPanel.jsx'
 import { Notice } from '../../components/ui.jsx'
-import { api, getToken } from '../../lib/api.js'
+import { api } from '../../lib/api.js'
+import { useAuth } from '../../lib/auth.jsx'
 import { formatDateTime } from '../../lib/format.js'
 
 export default function SummaryPanel({ analysisId, summary, aiEnabled, onRequested }) {
   const dialogRef = useRef(null)
+  const auth = useAuth()
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
-  const hasToken = Boolean(getToken())
+  const [budgetKey, setBudgetKey] = useState(0)
   const pending = summary && ['queued', 'running'].includes(summary.status)
 
   const confirm = async () => {
@@ -19,9 +22,11 @@ export default function SummaryPanel({ analysisId, summary, aiEnabled, onRequest
       dialogRef.current?.close()
       onRequested()
     } catch (err) {
+      if (err.status === 401) auth.expired()
       setError(err)
     } finally {
       setSending(false)
+      setBudgetKey((k) => k + 1)
     }
   }
 
@@ -70,18 +75,25 @@ export default function SummaryPanel({ analysisId, summary, aiEnabled, onRequest
       {!summary && <p className="muted">Nessuna sintesi IA è stata generata per questa analisi.</p>}
 
       {!pending &&
-        (aiEnabled && hasToken ? (
+        (aiEnabled && auth.authenticated ? (
           <>
+            <BudgetPanel refreshKey={budgetKey} />
             <button type="button" className="button" onClick={() => dialogRef.current?.showModal()}>
               {summary?.status === 'succeeded' ? 'Rigenera la sintesi IA' : 'Genera la sintesi IA'}
             </button>
             <dialog ref={dialogRef} className="dialog" aria-labelledby="confirm-title">
               <h2 id="confirm-title">Confermi la generazione?</h2>
               <p>
-                La sintesi usa un servizio esterno a pagamento (una richiesta al modello). Il risultato viene salvato e
-                riutilizzato: consultare l'analisi non genera altri costi.
+                La sintesi usa un servizio esterno a pagamento (una richiesta al modello, al massimo un nuovo tentativo se
+                la prima non viene elaborata). Il costo massimo stimato viene prenotato sul budget prima dell'invio. Il
+                risultato viene salvato: consultare l'analisi non genera altri costi.
               </p>
-              {error && <Notice tone="error">{error.message}</Notice>}
+              {error && (
+                <Notice tone="error">
+                  {error.message}
+                  {error.retryAt ? ` Riprova non prima delle ${formatDateTime(error.retryAt)}.` : ''}
+                </Notice>
+              )}
               <div className="dialog__actions">
                 <button type="button" className="button button--secondary" onClick={() => dialogRef.current?.close()}>
                   Annulla
@@ -94,10 +106,13 @@ export default function SummaryPanel({ analysisId, summary, aiEnabled, onRequest
           </>
         ) : (
           <p className="small muted">
-            {aiEnabled
-              ? 'La generazione è riservata agli analisti autorizzati: inserisci il token nella pagina '
-              : 'La generazione delle sintesi non è attiva su questo server. '}
-            {aiEnabled && <Link to="/new">Nuova analisi</Link>}
+            {aiEnabled ? (
+              <>
+                La generazione è riservata all'operatore: <Link to="/accesso">accedi</Link>.
+              </>
+            ) : (
+              'La generazione delle sintesi non è attiva su questo server.'
+            )}
           </p>
         ))}
     </div>

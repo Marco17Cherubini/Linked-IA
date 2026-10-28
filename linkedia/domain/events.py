@@ -57,6 +57,8 @@ class Event:
     time_precision: str = "unknown"
     sources: tuple[Source, ...] = field(default_factory=tuple)
     origin: str = "curated"  # curated | user
+    # Solo i casi marcati esplicitamente come pubblici sono visibili senza accesso.
+    public: bool = False
 
     @property
     def time_known(self) -> bool:
@@ -75,6 +77,7 @@ class Event:
             "time_precision": self.time_precision,
             "sources": [s.to_dict() for s in self.sources],
             "origin": self.origin,
+            "public": self.public,
         }
 
 
@@ -192,6 +195,8 @@ def parse_event(data: dict, *, origin: str = "curated") -> tuple[Event | None, l
             time_precision=precision,
             sources=tuple(sources),
             origin=origin,
+            # Un evento creato via API nasce sempre privato; la pubblicazione è esplicita.
+            public=origin == "curated" and data.get("public") is True,
         ),
         [],
     )

@@ -423,10 +423,58 @@ a.event-card__title:hover {
   flex-wrap: wrap;
 }
 
-.token-form {
+.login-form {
   max-width: 480px;
   display: grid;
   gap: var(--sp-3);
+}
+
+/* ---- Budget delle chiamate IA -------------------------------------------- */
+.budget {
+  margin-bottom: var(--sp-4);
+}
+
+.budget__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0;
+}
+
+.budget__grid dt {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.budget__grid dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* ---- Informative ---------------------------------------------------------- */
+.legal h2 {
+  margin-top: var(--sp-6);
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  background: var(--surface);
+}
+
+.legal-table th,
+.legal-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-table th {
+  color: var(--text-2);
+  font-weight: 600;
 }
 
 /* ---- Metodologia --------------------------------------------------------- */

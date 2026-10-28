@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import BudgetPanel from '../components/BudgetPanel.jsx'
 import { Notice } from '../components/ui.jsx'
-import { api, getToken, setToken } from '../lib/api.js'
+import { api } from '../lib/api.js'
+import { useAuth } from '../lib/auth.jsx'
+import { formatDateTime } from '../lib/format.js'
 
 const OFFSETS = ['-08:00', '-07:00', '-06:00', '-05:00', '-04:00', '+00:00', '+01:00', '+02:00', '+03:00', '+04:00', '+05:30', '+08:00', '+09:00']
 
@@ -38,38 +41,11 @@ export function buildPayload(form) {
   }
 }
 
-function TokenForm({ onSaved }) {
-  const [value, setValue] = useState('')
-  return (
-    <form
-      className="panel token-form"
-      onSubmit={(e) => {
-        e.preventDefault()
-        setToken(value.trim())
-        onSaved()
-      }}
-    >
-      <h2 className="panel__title">Accesso analista</h2>
-      <p>
-        La creazione di analisi è riservata. Il token resta solo in questa scheda del browser e viene inviato
-        esclusivamente al server di LiA.
-      </p>
-      <div className="field">
-        <label htmlFor="token">Token analista</label>
-        <input id="token" type="password" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value)} required />
-      </div>
-      <button className="button" type="submit">
-        Usa questo token
-      </button>
-    </form>
-  )
-}
-
 const EMPTY_SOURCE = { url: '', publisher: '', title: '', kind: 'news' }
 
 export default function NewAnalysisPage({ meta }) {
   const navigate = useNavigate()
-  const [hasToken, setHasToken] = useState(Boolean(getToken()))
+  const auth = useAuth()
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -107,10 +83,7 @@ export default function NewAnalysisPage({ meta }) {
       navigate(`/analysis/${res.analysis_id}`)
     } catch (err) {
       setError(err)
-      if (err.status === 403) {
-        setToken('')
-        setHasToken(false)
-      }
+      if (err.status === 401) auth.expired()
     } finally {
       setSending(false)
     }
@@ -126,25 +99,18 @@ export default function NewAnalysisPage({ meta }) {
         </p>
       </header>
 
-      {!hasToken ? (
-        <>
-          {error?.status === 403 && (
-            <Notice tone="error" title="Accesso rifiutato">
-              {error.message}. I dati inseriti nel modulo sono stati conservati.
-            </Notice>
-          )}
-          <TokenForm
-            onSaved={() => {
-              setError(null)
-              setHasToken(true)
-            }}
-          />
-        </>
+      {auth.status === 'loading' ? null : !auth.authenticated ? (
+        <Notice tone="info" title="Accesso richiesto">
+          {error?.status === 401 ? 'La sessione è scaduta. ' : ''}
+          Per creare un'analisi <Link to="/accesso?next=/new">accedi come operatore</Link>.
+        </Notice>
       ) : (
         <form className="form" onSubmit={submit} noValidate={false}>
+          <BudgetPanel />
           {error && (
             <Notice tone="error" title="Analisi non creata">
               {error.message}
+              {error.retryAt ? ` Riprova non prima delle ${formatDateTime(error.retryAt)}.` : ''}
             </Notice>
           )}
           <div className="field">
@@ -243,12 +209,9 @@ export default function NewAnalysisPage({ meta }) {
             <button
               type="button"
               className="button button--ghost"
-              onClick={() => {
-                setToken('')
-                setHasToken(false)
-              }}
+              onClick={() => auth.logout()}
             >
-              Esci (dimentica il token)
+              Esci
             </button>
           </div>
         </form>

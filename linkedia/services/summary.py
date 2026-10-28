@@ -1,7 +1,8 @@
 """Sintesi IA di un'analisi già calcolata.
 
-La sintesi è un servizio a pagamento: parte solo su richiesta esplicita di un analista,
-una volta per analisi (salvo rigenerazione esplicita), entro un limite giornaliero.
+La sintesi è un servizio a pagamento: parte solo su richiesta esplicita dell'operatore
+autenticato, una volta per analisi (salvo rigenerazione esplicita), entro un limite di
+numero e un budget monetario globale controllato prima di ogni tentativo (vedi `budget`).
 Il modello riceve esclusivamente i dati strutturati dell'analisi e deve restituire JSON
 con uno schema fisso, validato prima del salvataggio.
 """
@@ -10,17 +11,33 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 from ..config import Settings
-from ..errors import ConfigurationError, Conflict, InvalidInput, LiaError, ProviderUnavailable
-from ..providers.llm import LLMClient
+from ..errors import (
+    ConfigurationError,
+    Conflict,
+    InvalidInput,
+    LiaError,
+    ProviderUnavailable,
+    RetryLater,
+    Unauthorized,
+)
+from ..providers.llm import BilledResponseError, LLMClient
 from ..storage.store import Store, utc_now
+from .budget import BudgetService, actual_cost_micros, max_cost_micros, price_for
 
 log = logging.getLogger(__name__)
 
 PROMPT_VERSION = "summary-v1"
+MAX_OUTPUT_TOKENS = 900
+# Limite al testo inviato al modello: oltre questa dimensione la sintesi non parte.
+MAX_PROMPT_BYTES = 48_000
+# Tentativi complessivi per sintesi: si ripete solo se il precedente è certamente non fatturato.
+MAX_ATTEMPTS = 2
+RETRY_DELAY_SECONDS = 2.0
 
 SYSTEM_PROMPT = """Sei un analista che commenta dati di mercato già calcolati.
 Regole vincolanti:
@@ -76,6 +93,16 @@ def build_user_prompt(result: dict) -> str:
     return "Dati dell'analisi (JSON):\n" + json.dumps(payload, ensure_ascii=False)
 
 
+def parse_summary(content: str) -> dict:
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise ProviderUnavailable("Il modello IA ha restituito una risposta non valida") from exc
+    if not isinstance(data, dict):
+        raise ProviderUnavailable("Il modello IA non ha restituito un oggetto JSON")
+    return validate_summary(data)
+
+
 def validate_summary(data: dict) -> dict:
     def text(value, max_len: int) -> str:
         if not isinstance(value, str) or not value.strip():
@@ -97,13 +124,44 @@ def validate_summary(data: dict) -> dict:
 
 class SummaryService:
     def __init__(self, store: Store, settings: Settings, runner,
-                 llm_factory: Callable[[], LLMClient]):
+                 llm_factory: Callable[[], LLMClient], budget: BudgetService, *,
+                 authorize: Callable[[str], bool] = lambda session_id: True,
+                 sleep: Callable[[float], None] = time.sleep):
         self.store = store
         self.settings = settings
         self.runner = runner
         self.llm_factory = llm_factory
+        self.budget = budget
+        self.authorize = authorize
+        self.sleep = sleep
 
-    def request(self, analysis_id: str, *, confirm_cost: bool, regenerate: bool = False) -> str:
+    def _price(self):
+        price = price_for("deepseek", self.settings.deepseek_model)
+        if price is None:
+            # Senza un prezzo verificato non si può stimare il costo massimo: nessuna chiamata.
+            raise ConfigurationError("Sintesi IA disabilitata: prezzo del modello non verificato")
+        return price
+
+    def _prompt(self, analysis_id: str) -> str:
+        prompt = build_user_prompt(self.store.get_analysis(analysis_id)["result"])
+        if len(prompt.encode("utf-8")) + len(SYSTEM_PROMPT.encode("utf-8")) > MAX_PROMPT_BYTES:
+            raise InvalidInput("Analisi troppo estesa per la sintesi IA")
+        return prompt
+
+    def _max_cost(self, prompt: str) -> int:
+        size = len(SYSTEM_PROMPT.encode("utf-8")) + len(prompt.encode("utf-8"))
+        return max_cost_micros(self._price(), prompt_bytes=size, max_output_tokens=MAX_OUTPUT_TOKENS)
+
+    def typical_reservation(self) -> int | None:
+        """Riserva massima di una sintesi: usata per indicare quando sarà di nuovo possibile."""
+        try:
+            return max_cost_micros(self._price(), prompt_bytes=MAX_PROMPT_BYTES,
+                                   max_output_tokens=MAX_OUTPUT_TOKENS)
+        except ConfigurationError:
+            return None
+
+    def request(self, analysis_id: str, *, confirm_cost: bool, regenerate: bool = False,
+                session_id: str = "") -> str:
         if not self.settings.ai_enabled:
             raise ConfigurationError("Sintesi IA non abilitata su questo server")
         if not confirm_cost:
@@ -118,28 +176,69 @@ class SummaryService:
             raise Conflict("Esiste già una sintesi per questa analisi")
         since = (datetime.now(UTC) - timedelta(days=1)).isoformat(timespec="seconds")
         if self.store.summaries_created_since(since) >= self.settings.ai_daily_limit:
-            raise Conflict("Limite giornaliero di sintesi IA raggiunto")
-        summary_id = self.store.create_summary(analysis_id, PROMPT_VERSION)
-        self.runner.submit(self.run, summary_id, analysis_id)
+            raise RetryLater("Limite giornaliero di sintesi IA raggiunto", code="daily_limit",
+                             retry_after=3600)
+        # Primo controllo all'accodamento; la prenotazione vera avviene prima di ogni chiamata.
+        self.budget.ensure_available(self._max_cost(self._prompt(analysis_id)))
+        summary_id = self.store.create_summary(analysis_id, PROMPT_VERSION, exclusive=True)
+        if summary_id is None:
+            raise RetryLater("Un'altra operazione esterna è in corso: riprova tra qualche minuto.",
+                             code="busy", retry_after=60)
+        self.runner.submit(self.run, summary_id, analysis_id, session_id)
         return summary_id
 
-    def run(self, summary_id: str, analysis_id: str) -> None:
+    def _fail(self, summary_id: str, code: str, message: str) -> None:
+        self.store.update_summary(summary_id, status="failed", finished_at=utc_now(),
+                                  error_code=code, error_message=message)
+
+    def _call(self, client: LLMClient, price, prompt: str, summary_id: str) -> tuple[dict, dict | None]:
+        """Ogni tentativo prenota la propria riserva prima di partire e la riconcilia dopo."""
+        reserve = self._max_cost(prompt)
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            entry = self.budget.reserve(provider=client.provider, model=client.model,
+                                        purpose="summary", ref_id=summary_id, amount=reserve,
+                                        attempt=attempt)
+            try:
+                text, usage = client.chat(SYSTEM_PROMPT, prompt, max_tokens=MAX_OUTPUT_TOKENS)
+            except BilledResponseError as exc:
+                self.budget.confirm(entry, reserved=reserve, usage=exc.usage,
+                                    actual=actual_cost_micros(price, exc.usage) if exc.usage else None)
+                raise
+            except ProviderUnavailable as exc:
+                if exc.billing != "not_billed":
+                    # Esito sconosciuto: la riserva resta impegnata e non si ripete la chiamata.
+                    self.budget.mark_uncertain(entry, f"esito incerto: {exc.code}")
+                    raise
+                self.budget.release(entry, f"non fatturata: {exc.code}")
+                if attempt == MAX_ATTEMPTS:
+                    raise
+                log.info("Sintesi %s: nuovo tentativo dopo un errore non fatturato", summary_id)
+                self.sleep(RETRY_DELAY_SECONDS)
+                continue
+            except BaseException:
+                self.budget.mark_uncertain(entry, "errore inatteso durante la chiamata")
+                raise
+            self.budget.confirm(entry, reserved=reserve, usage=usage,
+                                actual=actual_cost_micros(price, usage) if usage else None)
+            return parse_summary(text), usage
+        raise AssertionError("unreachable")
+
+    def run(self, summary_id: str, analysis_id: str, session_id: str = "") -> None:
         self.store.update_summary(summary_id, status="running")
         try:
+            # Ricontrollo al momento dell'esecuzione: sessione, configurazione e budget.
+            if not self.authorize(session_id):
+                raise Unauthorized("Sessione scaduta o revocata prima dell'esecuzione")
+            if not self.settings.ai_enabled:
+                raise ConfigurationError("Sintesi IA non abilitata su questo server")
             client = self.llm_factory()
-            result = self.store.get_analysis(analysis_id)["result"]
-            data, usage = client.complete_json(SYSTEM_PROMPT, build_user_prompt(result),
-                                               max_tokens=900)
-            content = validate_summary(data)
+            content, usage = self._call(client, self._price(), self._prompt(analysis_id), summary_id)
         except LiaError as exc:
-            self.store.update_summary(summary_id, status="failed", finished_at=utc_now(),
-                                      error_code=exc.code, error_message=exc.message)
+            self._fail(summary_id, exc.code, exc.message)
             return
         except Exception:
             log.exception("Sintesi %s fallita", summary_id)
-            self.store.update_summary(summary_id, status="failed", finished_at=utc_now(),
-                                      error_code="internal_error",
-                                      error_message="Errore interno durante la sintesi.")
+            self._fail(summary_id, "internal_error", "Errore interno durante la sintesi.")
             return
         self.store.update_summary(summary_id, status="succeeded", finished_at=utc_now(),
                                   model=client.model, content=content, usage=usage)

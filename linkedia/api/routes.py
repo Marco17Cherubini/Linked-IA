@@ -1,4 +1,11 @@
-"""Rotte JSON. Il calcolo resta nei servizi: qui solo validazione dell'input e forma della risposta."""
+"""Rotte JSON. Il calcolo resta nei servizi: qui solo validazione dell'input, autorizzazione
+e forma della risposta.
+
+Lettura pubblica: casi dimostrativi marcati `public`. Tutto ciò che può contattare servizi
+esterni (nuovi eventi, ricalcoli, sintesi IA) richiede una sessione operatore valida e, per
+le richieste che modificano lo stato, il token CSRF della sessione. Il controllo avviene
+prima di qualunque accodamento o chiamata a provider.
+"""
 
 from __future__ import annotations
 
@@ -6,14 +13,14 @@ import hmac
 from datetime import date
 from functools import wraps
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 from .. import METHOD_VERSION, __version__
 from ..domain.analysis import HORIZONS, PATH_WINDOW, SERIES_WINDOW
 from ..domain.events import CATEGORIES
 from ..domain.markets import DEFAULT_MARKET, MARKETS
 from ..domain.precedents import criteria
-from ..errors import Forbidden, InvalidInput, NotFound
+from ..errors import ConfigurationError, Forbidden, InvalidInput, LiaError, NotFound, Unauthorized
 
 api = Blueprint("api", __name__)
 
@@ -26,16 +33,39 @@ def ctx(name: str):
     return current_app.extensions["lia"][name]
 
 
-def require_analyst(fn):
+def cookie_name() -> str:
+    # Il prefisso __Host- impone Secure, Path=/ e nessun Domain: il cookie resta di questo host.
+    return "__Host-lia_session" if ctx("settings").cookie_secure else "lia_session"
+
+
+def current_session() -> dict | None:
+    if "lia_session" not in g:
+        g.lia_session = ctx("auth").session(request.cookies.get(cookie_name()))
+    return g.lia_session
+
+
+def _same_origin() -> bool:
+    """Le richieste del browser dichiarano l'origine: deve coincidere con questo host."""
+    origin = request.headers.get("Origin")
+    if origin is not None:
+        return origin == f"{request.scheme}://{request.host}"
+    fetch_site = request.headers.get("Sec-Fetch-Site")
+    return fetch_site in (None, "same-origin", "none")
+
+
+def require_operator(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        token = ctx("settings").admin_token
-        if token is None:
-            raise Forbidden("La creazione di analisi è disabilitata su questo server")
-        header = request.headers.get("Authorization", "")
-        supplied = header.removeprefix("Bearer ").strip()
-        if not supplied or not hmac.compare_digest(supplied.encode(), token.encode()):
-            raise Forbidden("Token di analista mancante o non valido")
+        if not ctx("settings").auth_configured:
+            raise ConfigurationError("Le funzioni riservate sono disabilitate su questo server")
+        session = current_session()
+        if session is None:
+            raise Unauthorized("Accesso richiesto")
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            supplied = request.headers.get("X-CSRF-Token", "")
+            if not _same_origin() or not hmac.compare_digest(supplied.encode(),
+                                                             session["csrf_token"].encode()):
+                raise Forbidden("Richiesta non autorizzata (verifica CSRF non superata)", code="csrf")
         return fn(*args, **kwargs)
 
     return wrapper
@@ -47,8 +77,8 @@ def _page_args() -> tuple[int, int]:
         size = int(request.args.get("page_size", 20))
     except ValueError as exc:
         raise InvalidInput("Parametri di paginazione non validi") from exc
-    if page < 1 or not 1 <= size <= MAX_PAGE_SIZE:
-        raise InvalidInput(f"page >= 1 e page_size tra 1 e {MAX_PAGE_SIZE}")
+    if not 1 <= page <= 10_000 or not 1 <= size <= MAX_PAGE_SIZE:
+        raise InvalidInput(f"page tra 1 e 10000 e page_size tra 1 e {MAX_PAGE_SIZE}")
     return page, size
 
 
@@ -63,6 +93,8 @@ def _date_arg(name: str) -> date | None:
 
 
 def _json_body() -> dict:
+    if not request.is_json:
+        raise InvalidInput("Il corpo della richiesta deve essere JSON")
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         raise InvalidInput("Il corpo della richiesta deve essere un oggetto JSON")
@@ -74,9 +106,23 @@ def _paginated(items, total, page, size):
             "pages": max(1, -(-total // size))}
 
 
+def _visible_event(event_id: str):
+    """Evento consultabile da chi fa la richiesta: i privati esistono solo per l'operatore."""
+    event = ctx("store").get_event(event_id)
+    if not event.public and current_session() is None:
+        raise NotFound("Evento non trovato")
+    return event
+
+
+# --- Stato e metadati ----------------------------------------------------------------------
+
 @api.get("/health")
 def health():
-    return {"status": "ok", "version": __version__}
+    try:
+        ctx("store").check()
+    except LiaError:
+        return jsonify(status="unavailable"), 503
+    return {"status": "ok"}
 
 
 @api.get("/meta")
@@ -92,15 +138,78 @@ def meta():
         "path_window": PATH_WINDOW,
         "categories": [{"id": k, "label": v} for k, v in CATEGORIES.items()],
         "precedent_criteria": criteria(),
-        "features": {"create": settings.creation_enabled, "ai_summary": settings.ai_enabled},
+        "features": {"create": settings.creation_enabled, "ai_summary": settings.ai_enabled,
+                     "login": settings.auth_configured},
         "featured_event_id": settings.featured_event_id,
+        "legal": {"controller_name": settings.controller_name,
+                  "controller_email": settings.controller_email,
+                  "session_hours": settings.session_hours,
+                  "ai_model": settings.deepseek_model if settings.ai_enabled else None},
     }
 
+
+# --- Accesso operatore ---------------------------------------------------------------------
+
+def _session_body(session: dict | None) -> dict:
+    if session is None:
+        return {"authenticated": False}
+    return {"authenticated": True, "expires_at": session["expires_at"],
+            "csrf_token": session["csrf_token"]}
+
+
+@api.get("/auth/session")
+def auth_session():
+    response = jsonify(_session_body(current_session()))
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@api.post("/auth/login")
+def auth_login():
+    if not _same_origin():
+        raise Forbidden("Origine della richiesta non consentita", code="csrf")
+    body = _json_body()
+    result = ctx("auth").login(body.get("password"), request.remote_addr)
+    response = jsonify(authenticated=True, expires_at=result["expires_at"],
+                       csrf_token=result["csrf_token"])
+    response.headers["Cache-Control"] = "no-store"
+    response.set_cookie(cookie_name(), result["token"], max_age=result["max_age"], path="/",
+                        secure=ctx("settings").cookie_secure, httponly=True, samesite="Strict")
+    return response
+
+
+@api.post("/auth/logout")
+@require_operator
+def auth_logout():
+    ctx("auth").logout(current_session()["id"])
+    response = jsonify(authenticated=False)
+    response.headers["Cache-Control"] = "no-store"
+    response.delete_cookie(cookie_name(), path="/", secure=ctx("settings").cookie_secure,
+                           httponly=True, samesite="Strict")
+    return response
+
+
+@api.get("/operator/budget")
+@require_operator
+def operator_budget():
+    summary = ctx("summary")
+    status = ctx("budget").status(typical_amount=summary.typical_reservation())
+    status["active_jobs"] = ctx("store").active_job_count()
+    status["ai_enabled"] = ctx("settings").ai_enabled
+    status["ai_model"] = ctx("settings").deepseek_model
+    response = jsonify(status)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+# --- Eventi e analisi -----------------------------------------------------------------------
 
 @api.get("/featured")
 def featured():
     store = ctx("store")
     event_id = ctx("settings").featured_event_id
+    if not store.event_exists(event_id) or not store.get_event(event_id).public:
+        raise NotFound("Caso dimostrativo non ancora calcolato")
     analysis = store.latest_analysis_for_event(event_id, succeeded_only=True)
     if analysis is None:
         raise NotFound("Caso dimostrativo non ancora calcolato")
@@ -115,7 +224,7 @@ def list_events():
         raise InvalidInput("Categoria sconosciuta")
     items, total = ctx("store").list_events_with_latest(
         q=(request.args.get("q") or "").strip()[:100] or None, category=category,
-        page=page, page_size=size)
+        page=page, page_size=size, public_only=current_session() is None)
     for item in items:
         item["category_label"] = CATEGORIES.get(item["category"], item["category"])
     return _paginated(items, total, page, size)
@@ -123,20 +232,21 @@ def list_events():
 
 @api.get("/events/<event_id>")
 def get_event(event_id: str):
-    return ctx("store").get_event(event_id).to_dict()
+    return _visible_event(event_id).to_dict()
 
 
 @api.post("/events")
-@require_analyst
+@require_operator
 def create_event():
-    event, analysis_id = ctx("analysis").create_event(_json_body())
+    event, analysis_id = ctx("analysis").create_event(_json_body(),
+                                                      session_id=current_session()["id"])
     return jsonify(event_id=event.id, analysis_id=analysis_id), 202
 
 
 @api.post("/events/<event_id>/analyses")
-@require_analyst
+@require_operator
 def rerun_analysis(event_id: str):
-    analysis_id = ctx("analysis").request_analysis(event_id)
+    analysis_id = ctx("analysis").request_analysis(event_id, session_id=current_session()["id"])
     return jsonify(event_id=event_id, analysis_id=analysis_id), 202
 
 
@@ -151,7 +261,8 @@ def list_analyses():
         raise InvalidInput("Categoria sconosciuta")
     items, total = ctx("store").list_analyses(
         q=(request.args.get("q") or "").strip()[:100] or None, category=category, status=status,
-        date_from=_date_arg("from"), date_to=_date_arg("to"), page=page, page_size=size)
+        date_from=_date_arg("from"), date_to=_date_arg("to"), page=page, page_size=size,
+        public_only=current_session() is None)
     for item in items:
         item["category_label"] = CATEGORIES.get(item["category"], item["category"])
     return _paginated(items, total, page, size)
@@ -173,6 +284,7 @@ def _market_view(data: dict, view: str) -> dict:
 def get_analysis(analysis_id: str):
     store = ctx("store")
     analysis = store.get_analysis(analysis_id)
+    event = _visible_event(analysis["event_id"])
     market_id = request.args.get("market", DEFAULT_MARKET)
     if market_id not in MARKETS:
         raise InvalidInput("Mercato sconosciuto")
@@ -185,10 +297,10 @@ def get_analysis(analysis_id: str):
              if analysis["status"] == "failed" else None)
     analysis.pop("error_code", None)
     analysis.pop("error_message", None)
-    body = {**analysis, "error": error, "market": market_id, "view": view}
+    body = {**analysis, "error": error, "market": market_id, "view": view, "public": event.public}
 
     if result is None:
-        body["event"] = store.get_event(analysis["event_id"]).to_dict()
+        body["event"] = event.to_dict()
         body["markets"] = []
         body["data"] = None
         body["summary"] = None
@@ -211,16 +323,18 @@ def get_analysis(analysis_id: str):
     response = jsonify(body)
     if analysis["status"] == "succeeded":
         response.add_etag()
-        response.headers["Cache-Control"] = "no-cache"
+        # Le analisi private non devono restare in cache condivise.
+        response.headers["Cache-Control"] = "no-cache" if event.public else "private, no-cache"
         response.make_conditional(request)
     return response
 
 
 @api.post("/analyses/<analysis_id>/summary")
-@require_analyst
+@require_operator
 def request_summary(analysis_id: str):
     body = _json_body()
+    _visible_event(ctx("store").get_analysis(analysis_id)["event_id"])
     summary_id = ctx("summary").request(
         analysis_id, confirm_cost=body.get("confirm_cost") is True,
-        regenerate=body.get("regenerate") is True)
+        regenerate=body.get("regenerate") is True, session_id=current_session()["id"])
     return jsonify(summary_id=summary_id), 202

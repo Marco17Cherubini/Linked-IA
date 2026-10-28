@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, ErrorState, Notice, Segmented, Skeleton, TabPanel, Tabs } from '../../components/ui.jsx'
-import { api, getToken } from '../../lib/api.js'
+import { api } from '../../lib/api.js'
+import { useAuth } from '../../lib/auth.jsx'
 import { formatDateTime, STATUS_LABEL } from '../../lib/format.js'
 import { useUrlState } from '../../lib/useUrlState.js'
 import MarketChart from './MarketChart.jsx'
@@ -16,9 +17,10 @@ const WINDOWS = ['10', '20', '60']
 
 function RerunAction({ eventId, canCreate }) {
   const navigate = useNavigate()
+  const auth = useAuth()
   const [error, setError] = useState(null)
-  if (!canCreate || !getToken()) {
-    return <p className="small">Un analista autorizzato può avviare di nuovo il calcolo.</p>
+  if (!canCreate || !auth.authenticated) {
+    return <p className="small">L'operatore autenticato può avviare di nuovo il calcolo.</p>
   }
   return (
     <>
@@ -30,6 +32,7 @@ function RerunAction({ eventId, canCreate }) {
             const res = await api.rerun(eventId)
             navigate(`/analysis/${res.analysis_id}`)
           } catch (err) {
+            if (err.status === 401) auth.expired()
             setError(err)
           }
         }}

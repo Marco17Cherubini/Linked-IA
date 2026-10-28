@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useAuth } from '../lib/auth.jsx'
 
 const NAV = [
   { to: '/archive', label: 'Archivio' },
@@ -6,6 +7,8 @@ const NAV = [
 ]
 
 export default function Layout({ meta }) {
+  const auth = useAuth()
+  const navigate = useNavigate()
   return (
     <>
       <a className="skip-link" href="#main">
@@ -31,11 +34,31 @@ export default function Layout({ meta }) {
                   </NavLink>
                 </li>
               ))}
-              {meta?.features?.create && (
+              {meta?.features?.create && auth.authenticated && (
                 <li>
                   <NavLink to="/new" className="nav__link nav__link--cta">
                     Nuova analisi
                   </NavLink>
+                </li>
+              )}
+              {meta?.features?.login && auth.status === 'ready' && (
+                <li>
+                  {auth.authenticated ? (
+                    <button
+                      type="button"
+                      className="nav__link nav__button"
+                      onClick={async () => {
+                        await auth.logout()
+                        navigate('/')
+                      }}
+                    >
+                      Esci
+                    </button>
+                  ) : (
+                    <NavLink to="/accesso" className="nav__link">
+                      Accedi
+                    </NavLink>
+                  )}
                 </li>
               )}
             </ul>
@@ -54,6 +77,10 @@ export default function Layout({ meta }) {
           <p className="muted">
             Prezzi: Yahoo Finance (endpoint pubblico). Metodo v{meta?.method_version ?? '—'} ·{' '}
             <Link to="/methodology">come funziona</Link>
+          </p>
+          <p className="muted">
+            <Link to="/privacy">Informativa privacy</Link> · <Link to="/cookie">Cookie policy</Link> · Nessun cookie per i
+            visitatori, nessun tracciamento.
           </p>
         </div>
       </footer>

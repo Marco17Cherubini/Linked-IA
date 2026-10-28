@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 from datetime import date, timedelta
 from importlib import resources
 
@@ -12,7 +13,7 @@ from .. import METHOD_VERSION
 from ..domain.analysis import build_market_analysis
 from ..domain.events import Event, parse_event
 from ..domain.markets import MARKETS
-from ..errors import Conflict, InvalidInput, LiaError, ProviderUnavailable
+from ..errors import Conflict, InvalidInput, LiaError, ProviderUnavailable, RetryLater, Unauthorized
 from ..providers.market_data import MarketDataProvider
 from ..storage.store import Store, utc_now
 
@@ -37,11 +38,13 @@ def load_catalogue() -> list[Event]:
 
 
 class AnalysisService:
-    def __init__(self, store: Store, market_data: MarketDataProvider, runner, *, today=date.today):
+    def __init__(self, store: Store, market_data: MarketDataProvider, runner, *, today=date.today,
+                 authorize: Callable[[str], bool] = lambda session_id: True):
         self.store = store
         self.market_data = market_data
         self.runner = runner
         self._today = today
+        self.authorize = authorize
         self._failed_fetches: dict[str, float] = {}
 
     # --- Eventi ---------------------------------------------------------------------------
@@ -52,7 +55,7 @@ class AnalysisService:
             self.store.upsert_event(event)
         return len(events)
 
-    def create_event(self, payload: dict) -> tuple[Event, str]:
+    def create_event(self, payload: dict, *, session_id: str | None = None) -> tuple[Event, str]:
         event, errors = parse_event(payload, origin="user")
         if errors:
             raise InvalidInput("Dati dell'evento non validi: " + "; ".join(errors))
@@ -60,18 +63,28 @@ class AnalysisService:
             raise InvalidInput("La data dell'evento non può essere futura")
         if self.store.event_exists(event.id):
             raise Conflict("Esiste già un evento con questo identificativo")
+        if session_id is not None and self.store.active_job_count():
+            # Rifiuto prima di salvare: l'evento non resta orfano senza analisi.
+            raise RetryLater("Un'altra operazione esterna è in corso: riprova tra qualche minuto.",
+                             code="busy", retry_after=60)
         self.store.upsert_event(event)
-        return event, self.request_analysis(event.id)
+        return event, self.request_analysis(event.id, session_id=session_id)
 
     # --- Analisi --------------------------------------------------------------------------
 
-    def request_analysis(self, event_id: str) -> str:
+    def request_analysis(self, event_id: str, *, session_id: str | None = None) -> str:
+        """Accoda il calcolo. Con `session_id` (richiesta dall'API) il job parte solo se nessun
+        altro job esterno è attivo e, al momento dell'esecuzione, la sessione è ancora valida."""
         self.store.get_event(event_id)  # NotFound se non esiste
         latest = self.store.latest_analysis_for_event(event_id)
         if latest and latest["status"] in ("queued", "running"):
             return latest["id"]
-        analysis_id = self.store.create_analysis(event_id, METHOD_VERSION)
-        self.runner.submit(self.run_analysis, analysis_id)
+        analysis_id = self.store.create_analysis(event_id, METHOD_VERSION,
+                                                 exclusive=session_id is not None)
+        if analysis_id is None:
+            raise RetryLater("Un'altra operazione esterna è in corso: riprova tra qualche minuto.",
+                             code="busy", retry_after=60)
+        self.runner.submit(self.run_analysis, analysis_id, session_id)
         return analysis_id
 
     def _price_range(self, events: list[Event]) -> tuple[date, date]:
@@ -116,10 +129,12 @@ class AnalysisService:
                 errors[market_id] = exc.message
         return errors
 
-    def run_analysis(self, analysis_id: str) -> None:
+    def run_analysis(self, analysis_id: str, session_id: str | None = None) -> None:
         analysis = self.store.get_analysis(analysis_id)
         self.store.mark_analysis_running(analysis_id)
         try:
+            if session_id is not None and not self.authorize(session_id):
+                raise Unauthorized("Sessione scaduta o revocata prima dell'esecuzione")
             result = self._compute(analysis["event_id"])
         except LiaError as exc:
             self.store.fail_analysis(analysis_id, exc.code, exc.message)
@@ -133,7 +148,9 @@ class AnalysisService:
 
     def _compute(self, event_id: str) -> dict:
         event = self.store.get_event(event_id)
-        catalogue = self.store.all_events()
+        # Un caso pubblico usa come precedenti solo casi pubblici: i suoi risultati, visibili
+        # a tutti, non devono contenere eventi privati dell'operatore.
+        catalogue = self.store.all_events(public_only=event.public)
         start, end = self._price_range(catalogue + [event])
         markets, market_errors, providers = {}, {}, {}
         for market_id, market in MARKETS.items():

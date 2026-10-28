@@ -10,6 +10,11 @@ import pytest
 from linkedia.config import Settings
 from linkedia.domain.events import Event, Source
 from linkedia.domain.sessions import PriceBar
+from linkedia.services.auth import hash_password
+
+# FIXTURE: password usata solo dai test, mai configurata altrove.
+PASSWORD = "fixture-password-0001"
+PASSWORD_HASH = hash_password(PASSWORD)
 
 
 @pytest.fixture(autouse=True)
@@ -61,4 +66,4 @@ def make_event(event_id: str = "fixture-event", *, on: date = date(2020, 6, 10),
 @pytest.fixture
 def settings(tmp_path) -> Settings:
     return Settings(database_path=tmp_path / "test.sqlite3", frontend_dist=tmp_path / "dist",
-                    admin_token="test-token")
+                    operator_password_hash=PASSWORD_HASH)

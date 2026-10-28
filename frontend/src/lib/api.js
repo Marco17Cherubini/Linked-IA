@@ -1,45 +1,36 @@
-// Client dell'API. Gli errori del server arrivano come { error: { code, message } }.
+// Client dell'API. Gli errori del server arrivano come { error: { code, message, retry_after?, retry_at? } }.
+//
+// L'accesso dell'operatore usa un cookie di sessione HttpOnly impostato dal server: il browser
+// lo invia da solo e JavaScript non può leggerlo. Il token CSRF della sessione resta soltanto
+// in memoria (mai in localStorage, sessionStorage o nell'URL) e accompagna le richieste che
+// modificano lo stato.
 
-const TOKEN_KEY = 'lia.analystToken'
+let csrfToken = ''
+
+export function setCsrfToken(token) {
+  csrfToken = token || ''
+}
 
 export class ApiError extends Error {
-  constructor(status, code, message) {
+  constructor(status, code, message, { retryAfter = null, retryAt = null } = {}) {
     super(message)
     this.status = status
     this.code = code
+    this.retryAfter = retryAfter
+    this.retryAt = retryAt
   }
 }
 
-// Il token resta solo nella sessione del browser: mai nell'URL, mai in localStorage.
-export function getToken() {
-  try {
-    return sessionStorage.getItem(TOKEN_KEY) || ''
-  } catch {
-    return ''
-  }
-}
-
-export function setToken(token) {
-  try {
-    if (token) sessionStorage.setItem(TOKEN_KEY, token)
-    else sessionStorage.removeItem(TOKEN_KEY)
-  } catch {
-    /* archiviazione non disponibile: il token vale solo per questa pagina */
-  }
-}
-
-async function request(path, { method = 'GET', body, auth = false, signal } = {}) {
+async function request(path, { method = 'GET', body, signal } = {}) {
   const headers = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  if (auth) {
-    const token = getToken()
-    if (token) headers.Authorization = `Bearer ${token}`
-  }
+  if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken
   let response
   try {
     response = await fetch(`/api${path}`, {
       method,
       headers,
+      credentials: 'same-origin',
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     })
@@ -55,7 +46,10 @@ async function request(path, { method = 'GET', body, auth = false, signal } = {}
   }
   if (!response.ok) {
     const err = data?.error
-    throw new ApiError(response.status, err?.code || 'http_error', err?.message || `Errore ${response.status}`)
+    throw new ApiError(response.status, err?.code || 'http_error', err?.message || `Errore ${response.status}`, {
+      retryAfter: err?.retry_after ?? null,
+      retryAt: err?.retry_at ?? null,
+    })
   }
   return data
 }
@@ -80,9 +74,16 @@ export const api = {
   forgetAnalysis(id) {
     for (const key of analysisCache.keys()) if (key.startsWith(`${id}|`)) analysisCache.delete(key)
   },
-  rerun: (eventId) => request(`/events/${encodeURIComponent(eventId)}/analyses`, { method: 'POST', auth: true }),
-  createEvent: (payload) => request('/events', { method: 'POST', body: payload, auth: true }),
-  requestSummary: (id, body) => request(`/analyses/${encodeURIComponent(id)}/summary`, { method: 'POST', body, auth: true }),
+  forgetAll() {
+    analysisCache.clear()
+  },
+  session: (opts) => request('/auth/session', opts),
+  login: (password) => request('/auth/login', { method: 'POST', body: { password } }),
+  logout: () => request('/auth/logout', { method: 'POST', body: {} }),
+  budget: (opts) => request('/operator/budget', opts),
+  rerun: (eventId) => request(`/events/${encodeURIComponent(eventId)}/analyses`, { method: 'POST', body: {} }),
+  createEvent: (payload) => request('/events', { method: 'POST', body: payload }),
+  requestSummary: (id, body) => request(`/analyses/${encodeURIComponent(id)}/summary`, { method: 'POST', body }),
 }
 
 function clean(params = {}) {
