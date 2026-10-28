@@ -123,6 +123,24 @@ export default function MethodologyPage({ meta }) {
         </p>
       </section>
 
+      <section id="ricerca">
+        <h2>Ricerca delle notizie per data</h2>
+        <p>
+          La ricerca interroga un motore di ricerca web con poche query generate dalla data e dai filtri. Ogni risultato
+          porta la data di pubblicazione dichiarata dalla fonte, che LiA ricontrolla: le <strong>fonti dell'epoca</strong>{' '}
+          sono pubblicate tra il giorno cercato e due giorni dopo; le <strong>ricostruzioni successive</strong> possono
+          essere di anni dopo e contenere informazioni non disponibili all'epoca, e sono indicate come tali. Data
+          dell'evento, data di pubblicazione e momento del recupero restano distinti.
+        </p>
+        <p>
+          Gli articoli con lo stesso URL o con titoli molto simili sono raggruppati in un evento; le copie dello stesso
+          articolo su più siti contano come una sola fonte. Gli eventi sono ordinati per numero di fonti indipendenti e
+          per presenza di fonti dell'epoca, mai per i movimenti di mercato successivi. Quando le fonti indicano solo il
+          giorno, nessun orario viene inventato: si applica la convenzione prudente della seduta base. La ricerca non è
+          esaustiva: mostra gli eventi trovati nelle fonti consultate, verificati solo sugli estratti forniti dal motore.
+        </p>
+      </section>
+
       <section id="ia">
         <h2>Sintesi IA</h2>
         <p>

@@ -31,14 +31,17 @@ class NewsStore:
                 (search_id, json.dumps(params), cache_key, version, utc_now()))
         return search_id
 
-    def find_reusable(self, cache_key: str, *, succeeded_since: str) -> dict | None:
-        """Ricerca identica già in corso, oppure riuscita dopo `succeeded_since` (cache)."""
+    def find_reusable(self, cache_key: str, *, succeeded_since: str, incomplete_since: str) -> dict | None:
+        """Ricerca identica in corso, riuscita dopo `succeeded_since`, oppure parziale o vuota
+        dopo `incomplete_since` (finestra breve: un guasto temporaneo non deve bloccare i retry)."""
         with self.store.connect() as conn:
             row = conn.execute(
                 "SELECT id, status FROM news_searches WHERE cache_key = ? "
                 "AND (status IN ('queued','running') "
-                "OR (status IN ('succeeded','partial','empty') AND created_at > ?)) "
-                "ORDER BY created_at DESC LIMIT 1", (cache_key, succeeded_since)).fetchone()
+                "OR (status = 'succeeded' AND created_at > ?) "
+                "OR (status IN ('partial','empty') AND created_at > ?)) "
+                "ORDER BY created_at DESC LIMIT 1",
+                (cache_key, succeeded_since, incomplete_since)).fetchone()
         return dict(row) if row else None
 
     def update(self, search_id: str, **fields) -> None:

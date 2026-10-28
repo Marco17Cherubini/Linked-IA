@@ -13,6 +13,7 @@ uno stato proprio (`empty`).
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -51,6 +52,7 @@ log = logging.getLogger(__name__)
 
 CACHE_TTL_HISTORICAL = timedelta(days=30)
 CACHE_TTL_RECENT = timedelta(hours=6)
+CACHE_TTL_INCOMPLETE = timedelta(minutes=15)
 RECENT_DAYS = 30
 RETENTION = timedelta(days=90)
 MAX_SOURCES_PER_EVENT = 8
@@ -75,6 +77,7 @@ class NewsSearchService:
         self.authorize = authorize
         self.today = today
         self.sleep = sleep
+        self._analyze_lock = threading.Lock()
 
     # --- Costi -----------------------------------------------------------------------------------
 
@@ -109,7 +112,9 @@ class NewsSearchService:
             raise InvalidInput("Parametri di ricerca non validi: " + "; ".join(errors))
         ttl = CACHE_TTL_RECENT if (self.today() - params.end).days < RECENT_DAYS else CACHE_TTL_HISTORICAL
         since = (datetime.now(UTC) - ttl).isoformat(timespec="seconds")
-        existing = self.news.find_reusable(params.cache_key(), succeeded_since=since)
+        incomplete = (datetime.now(UTC) - CACHE_TTL_INCOMPLETE).isoformat(timespec="seconds")
+        existing = self.news.find_reusable(params.cache_key(), succeeded_since=since,
+                                           incomplete_since=incomplete)
         if existing:
             # Doppio clic, ricarica o richiesta identica recente: nessuna nuova spesa.
             return {"search_id": existing["id"], "reused": True,
@@ -128,12 +133,16 @@ class NewsSearchService:
     # --- Esecuzione -----------------------------------------------------------------------------
 
     def _fail(self, search_id: str, code: str, message: str) -> None:
-        self.news.update(search_id, status="failed", stage="failed", error_code=code, error_message=message,
-                         finished_at=utc_now())
+        try:
+            self.news.update(search_id, status="failed", stage="failed", error_code=code,
+                             error_message=message, finished_at=utc_now())
+        except Exception:
+            # Il riavvio successivo la marcherà come interrotta; qui resta solo il log.
+            log.exception("Impossibile registrare il fallimento della ricerca %s", search_id)
 
     def run(self, search_id: str, session_id: str = "") -> None:
-        self.news.update(search_id, status="running", stage="searching", started_at=utc_now())
         try:
+            self.news.update(search_id, status="running", stage="searching", started_at=utc_now())
             if not self.authorize(session_id):
                 raise Unauthorized("Sessione scaduta o revocata prima dell'esecuzione")
             if not self.settings.news_search_enabled:
@@ -167,7 +176,7 @@ class NewsSearchService:
                                                           published_after=spec.published_after,
                                                           published_before=spec.published_before), None),
                     cost_of=lambda usage: price.per_request, attempts=SEARCH_ATTEMPTS, sleep=self.sleep)
-            except (ProviderUnavailable, RetryLater) as exc:
+            except LiaError as exc:
                 entry.update(status="failed", error_code=exc.code)
                 failures.append(exc)
                 request_log.append(entry)
@@ -265,6 +274,12 @@ class NewsSearchService:
         return candidate
 
     def analyze_event(self, search_id: str, idx: int, *, session_id: str) -> dict:
+        # Un solo processo (vedi deployment): il lock rende atomici controllo, creazione e
+        # collegamento, così un doppio clic non crea due eventi.
+        with self._analyze_lock:
+            return self._analyze_event(search_id, idx, session_id=session_id)
+
+    def _analyze_event(self, search_id: str, idx: int, *, session_id: str) -> dict:
         search = self.news.get(search_id)
         if search["status"] not in ("succeeded", "partial"):
             raise Conflict("La ricerca non è conclusa o non ha prodotto eventi")
@@ -273,7 +288,12 @@ class NewsSearchService:
             raise InvalidInput("Evento non presente in questa ricerca")
         event = events[idx]
         if event.get("analysis_id"):
-            return {"event_id": event["event_id"], "analysis_id": event["analysis_id"], "reused": True}
+            previous = self.store.get_analysis(event["analysis_id"])
+            if previous["status"] != "failed":
+                return {"event_id": event["event_id"], "analysis_id": event["analysis_id"], "reused": True}
+            analysis_id = self.analysis.request_analysis(event["event_id"], session_id=session_id)
+            self.news.link_event(search_id, idx, event["event_id"], analysis_id)
+            return {"event_id": event["event_id"], "analysis_id": analysis_id, "reused": False}
         results = {r["idx"]: r for r in search["results"]}
         accessed = (search["finished_at"] or utc_now())[:10]
         sources = [{"url": results[i]["url"], "publisher": results[i]["publisher"][:80],

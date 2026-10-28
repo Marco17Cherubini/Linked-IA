@@ -51,7 +51,7 @@ export default function NewAnalysisPage({ meta }) {
   const [form, setForm] = useState(() => ({
     title: prefill?.title ?? '',
     description: prefill?.description ?? '',
-    category: prefill?.category ?? meta.categories[0].id,
+    category: meta.categories.some((c) => c.id === prefill?.category) ? prefill.category : meta.categories[0].id,
     tags: prefill?.tags?.join(', ') ?? '',
     date: prefill?.date ?? '',
     time: '',

@@ -65,6 +65,11 @@ export default function PrivacyPage({ meta }) {
           Contenuti inseriti: titolo, descrizione, data ed eventuali fonti degli eventi analizzati, con i risultati
           calcolati. Questi testi non devono contenere dati personali di terzi.
         </li>
+        <li>
+          Ricerche di notizie: data o intervallo, filtri scelti dall'operatore, query inviate al motore di ricerca e, per
+          ogni risultato, URL, titolo, editore, date di pubblicazione e un estratto breve. Non si conserva il testo
+          integrale degli articoli. Gli articoli possono citare persone note: sono informazioni già pubblicate dalle fonti.
+        </li>
       </ul>
 
       <h2>4. Finalità e basi giuridiche</h2>
@@ -88,9 +93,14 @@ export default function PrivacyPage({ meta }) {
           vicini al visitatore e il fornitore, con sede negli Stati Uniti, può accedere ai dati per gestire il servizio.
         </li>
         <li>
-          <strong>DeepSeek</strong> (Hangzhou DeepSeek Artificial Intelligence Co., Ltd., Cina): genera le sintesi IA solo
-          quando l'operatore lo richiede e conferma il costo. Riceve esclusivamente i dati strutturati dell'analisi (titolo
-          e descrizione dell'evento, date, valori numerici), mai dati dei visitatori.
+          <strong>Perplexity</strong> (Perplexity AI, Inc., Stati Uniti): motore di ricerca usato dalla ricerca delle
+          notizie avviata dall'operatore. Riceve le query generate da LiA (date, argomento e area scelti dall'operatore),
+          mai dati dei visitatori.
+        </li>
+        <li>
+          <strong>DeepSeek</strong> (Hangzhou DeepSeek Artificial Intelligence Co., Ltd., Cina): genera le sintesi IA e,
+          se configurato, organizza i risultati della ricerca in schede evento, solo su azione dell'operatore. Riceve i
+          dati strutturati dell'analisi o titoli ed estratti pubblici degli articoli trovati, mai dati dei visitatori.
         </li>
         <li>
           <strong>Yahoo Finance</strong>: il server scarica da qui i prezzi storici degli indici. Le richieste partono dal
@@ -108,7 +118,8 @@ export default function PrivacyPage({ meta }) {
         Railway ha sede negli Stati Uniti: l'eventuale accesso del fornitore avviene secondo le garanzie del suo accordo
         sul trattamento dei dati (<a href="https://railway.com/legal/dpa" rel="noopener noreferrer">DPA di Railway</a>).
         La Cina non è oggetto di una decisione di adeguatezza della Commissione europea: per questo a DeepSeek non sono
-        inviati dati dei visitatori né, per regola d'uso, dati personali.
+        inviati dati dei visitatori né, per regola d'uso, dati personali. Anche Perplexity ha sede negli Stati Uniti e
+        riceve solo le query di ricerca formulate da LiA.
       </p>
 
       <h2>7. Conservazione</h2>
@@ -119,6 +130,10 @@ export default function PrivacyPage({ meta }) {
           rimossi al successivo accesso o riavvio) oppure quando l'operatore revoca tutte le sessioni.
         </li>
         <li>Tentativi di accesso: 24 ore.</li>
+        <li>
+          Ricerche di notizie: 90 giorni; restano più a lungo solo quelle da cui è nato un evento analizzato, finché esiste
+          l'evento.
+        </li>
         <li>
           Casi e analisi: finché utili alla documentazione del progetto; le copie di sicurezza del database seguono le
           rotazioni descritte nella documentazione tecnica (ultime 7 copie locali e i backup programmati dell'hosting).

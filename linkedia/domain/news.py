@@ -399,12 +399,15 @@ def independent_sources(group: list[NewsResult]) -> tuple[int, bool]:
 def mentions_date(text: str, day: date) -> bool:
     lowered = text.lower()
     month_en, month_it = _MONTHS_EN[day.month - 1].lower(), _MONTHS_IT[day.month - 1]
+    d = rf"(?<!\d)0?{day.day}(?!\d)"
     patterns = (
-        f"{month_en} {day.day}, {day.year}", f"{day.day} {month_en} {day.year}",
-        f"{month_en[:3]}. {day.day}, {day.year}", f"{day.day} {month_it} {day.year}",
-        day.isoformat(), f"{month_en} {day.day}", f"{day.day} {month_it}",
+        rf"{month_en}\.? {d}(?:st|nd|rd|th)?\b",
+        rf"{month_en[:3]}\.? {d}(?:st|nd|rd|th)?\b",
+        rf"{d}(?:st|nd|rd|th)? (?:of )?{month_en}\b",
+        rf"{d} {month_it}\b",
+        rf"(?<!\d){day.isoformat()}(?!\d)",
     )
-    return any(p in lowered for p in patterns)
+    return any(re.search(p, lowered) for p in patterns)
 
 
 def guess_category(text: str, fallback: str | None) -> tuple[str, bool]:

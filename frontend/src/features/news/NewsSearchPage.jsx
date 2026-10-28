@@ -10,6 +10,8 @@ import EventCard from './EventCard.jsx'
 import { EXCLUDED_TEXT, MODES, STAGE_LABEL, errorText } from './newsText.js'
 
 const PENDING = ['queued', 'running']
+const MAX_POLL_RETRIES = 5
+const transient = (error) => error.status === 0 || error.status === 429 || error.status >= 500
 const today = () => new Date().toISOString().slice(0, 10)
 
 // Avanzamento reale letto dal server: nessuna chiamata ai provider, solo lo stato salvato.
@@ -20,18 +22,26 @@ function useSearch(id) {
     const controller = new AbortController()
     let timer = null
     let delay = 1200
+    let retries = 0
     let cancelled = false
+    const schedule = () => {
+      timer = setTimeout(load, delay)
+      delay = Math.min(delay * 1.5, 8000)
+    }
     const load = async () => {
       try {
         const data = await api.newsSearch(id, { signal: controller.signal })
         if (cancelled) return
+        retries = 0
         setState({ data, error: null })
-        if (PENDING.includes(data.status)) {
-          timer = setTimeout(load, delay)
-          delay = Math.min(delay * 1.5, 8000)
-        }
+        if (PENDING.includes(data.status)) schedule()
       } catch (error) {
-        if (error.name !== 'AbortError' && !cancelled) setState({ data: null, error })
+        if (error.name === 'AbortError' || cancelled) return
+        setState((s) => ({ data: s.data, error }))
+        if (transient(error) && retries < MAX_POLL_RETRIES) {
+          retries += 1
+          schedule()
+        }
       }
     }
     setState({ data: null, error: null })
@@ -82,7 +92,7 @@ function SearchForm({ meta, onStarted, disabled }) {
       )}
       <fieldset className="fieldset">
         <legend>Quando</legend>
-        <div className="segmented-inline" role="radiogroup" aria-label="Tipo di periodo">
+        <div className="segmented-inline">
           <label>
             <input type="radio" name="period" checked={!range} onChange={() => setRange(false)} /> Un giorno
           </label>
@@ -208,6 +218,7 @@ export default function NewsSearchPage({ meta }) {
   const searchId = params.get('id') || ''
   const { data: search, error } = useSearch(searchId)
   const [analyzeError, setAnalyzeError] = useState(null)
+  useEffect(() => setAnalyzeError(null), [searchId])
   const recent = useApi((opts) => (auth.authenticated ? api.recentNewsSearches(opts) : Promise.resolve(null)), [auth.authenticated, searchId])
 
   if (auth.status === 'loading') return <div className="page"><Skeleton /></div>
@@ -222,6 +233,15 @@ export default function NewsSearchPage({ meta }) {
     )
   }
   const pending = search && PENDING.includes(search.status)
+  // Dall'avvio alla prima risposta dello stato il modulo resta bloccato: niente doppio invio.
+  const starting = Boolean(searchId) && !search && !error
+  const statusText = pending
+    ? `${STAGE_LABEL[search.stage] ?? 'In corso'}… La pagina si aggiorna da sola.`
+    : search && search.status !== 'failed'
+      ? `Ricerca completata: ${search.events.length} eventi trovati nelle fonti consultate.`
+      : search?.status === 'failed'
+        ? 'Ricerca non riuscita.'
+        : ''
 
   return (
     <div className="page news-page">
@@ -241,7 +261,7 @@ export default function NewsSearchPage({ meta }) {
       ) : (
         <div className="news-layout">
           <div>
-            <SearchForm meta={meta} disabled={pending} onStarted={(res) => setParams({ id: res.search_id })} />
+            <SearchForm meta={meta} disabled={pending || starting} onStarted={(res) => setParams({ id: res.search_id })} />
             <BudgetPanel refreshKey={search?.status} />
             <p className="small">
               Percorso secondario: <Link to="/new">inserimento manuale di un evento</Link>.
@@ -249,16 +269,16 @@ export default function NewsSearchPage({ meta }) {
           </div>
           <div>
             {error && (
-              <Notice tone="error" title="Ricerca non disponibile">
-                {error.message}
+              <Notice tone="error" title="Stato della ricerca non disponibile">
+                {error.message} La ricerca prosegue sul server.{' '}
+                <button type="button" className="button button--ghost" onClick={() => window.location.reload()}>
+                  Riprova
+                </button>
               </Notice>
             )}
-            {pending && (
-              <p role="status" className="job-status">
-                <span className="spinner" aria-hidden="true" /> {STAGE_LABEL[search.stage] ?? 'In corso'}… La pagina si
-                aggiorna da sola.
-              </p>
-            )}
+            <p role="status" aria-live="polite" className={pending ? 'job-status' : 'sr-only'}>
+              {pending && <span className="spinner" aria-hidden="true" />} {statusText}
+            </p>
             {analyzeError && (
               <Notice tone="error" title="Analisi non avviata">
                 {errorText(analyzeError.code, analyzeError.message)}
@@ -271,7 +291,7 @@ export default function NewsSearchPage({ meta }) {
                 <ul className="news-recent">
                   {recent.data.items.map((r) => (
                     <li key={r.id}>
-                      <Link to={`/ricerca?id=${r.id}`}>
+                      <Link to={`/ricerca?id=${encodeURIComponent(r.id)}`}>
                         {r.params.start === r.params.end ? formatDate(r.params.start) : `${formatDate(r.params.start)} – ${formatDate(r.params.end)}`}
                       </Link>{' '}
                       <span className="small muted">

@@ -34,6 +34,7 @@ export default function EventCard({ searchId, event, results, onError }) {
 
   const analyze = async () => {
     setBusy(true)
+    onError(null)
     try {
       const res = await api.analyzeNewsEvent(searchId, event.idx)
       navigate(`/analysis/${res.analysis_id}`)

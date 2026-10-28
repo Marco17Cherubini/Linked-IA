@@ -145,7 +145,8 @@ class Settings:
 
     @property
     def news_search_enabled(self) -> bool:
-        return self.perplexity_api_key is not None and self.auth_configured
+        return (self.perplexity_api_key is not None and self.auth_configured
+                and self.perplexity_base_url.startswith("https://"))
 
     def require_deepseek_key(self) -> str:
         if not self.deepseek_api_key:

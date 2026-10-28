@@ -404,3 +404,47 @@ def test_distant_contemporary_reports_in_a_range_are_flagged():
     draft = draft_event([early, late], params)
     assert {"date_ambiguous", "date_estimated"} <= set(draft.flags)
     assert draft.event_date == date(2008, 9, 10)
+
+
+def test_date_mentions_respect_number_boundaries():
+    from linkedia.domain.news import mentions_date
+
+    assert mentions_date("On September 15, 2008, Lehman filed", date(2008, 9, 15))
+    assert mentions_date("il 1 marzo 2020 i mercati", date(2020, 3, 1))
+    assert not mentions_date("Markets fell on March 15 after", date(2020, 3, 1))
+    assert not mentions_date("il 21 marzo 2020", date(2020, 3, 1))
+
+
+def test_partial_search_is_reused_only_briefly(settings):
+    search = FakeSearch(CONTEMPORARY, ProviderUnavailable("down", code="provider_auth", billing="not_billed"))
+    app = news_app(settings, search)
+    op = Operator(client_for(app))
+    first = start(op).get_json()["search_id"]
+    assert start(op).get_json()["search_id"] == first  # doppio clic: nessuna nuova spesa
+    with app.extensions["lia"]["store"].connect() as conn:
+        conn.execute("UPDATE news_searches SET created_at = '2000-01-01T00:00:00+00:00'")
+    retried = start(op)
+    assert retried.status_code == 202 and retried.get_json()["search_id"] != first
+
+
+def test_failed_analysis_can_be_restarted_from_the_card(settings):
+    from helpers import FakeMarketData
+
+    from linkedia.domain.markets import MARKETS
+
+    app = news_app(settings, market_data=FakeMarketData(fail=set(MARKETS)))
+    op = Operator(client_for(app))
+    search_id = start(op).get_json()["search_id"]
+    first = op.post(f"/api/news/searches/{search_id}/events/0/analyze").get_json()
+    assert op.get(f"/api/analyses/{first['analysis_id']}").get_json()["status"] == "failed"
+    analysis = app.extensions["lia"]["analysis"]
+    analysis.market_data = FakeMarketData()
+    analysis._failed_fetches.clear()  # trascorsa la pausa dopo il guasto del provider prezzi
+    second = op.post(f"/api/news/searches/{search_id}/events/0/analyze").get_json()
+    assert second["analysis_id"] != first["analysis_id"] and second["event_id"] == first["event_id"]
+    assert op.get(f"/api/analyses/{second['analysis_id']}").get_json()["status"] == "succeeded"
+
+
+def test_api_key_is_only_sent_over_https(settings):
+    app = news_app(settings, perplexity_base_url="http://api.perplexity.ai")
+    assert client_for(app).get("/api/meta").get_json()["features"]["news_search"] is False

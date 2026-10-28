@@ -20,7 +20,9 @@ def start_search():
 @news_api.get("/searches")
 @require_operator
 def recent_searches():
-    return {"items": ctx("news").recent()}
+    response = jsonify(items=ctx("news").recent())
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @news_api.get("/searches/<search_id>")

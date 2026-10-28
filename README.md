@@ -93,6 +93,10 @@ Each chart comes with a written summary and a data table, definitions are one cl
 
 ![Phone layout of the analysis workspace](docs/images/07-mobile.jpg)
 
+### Find the news by date
+
+The operator picks a day (or a range of up to seven days). LiA queries the Perplexity Search API, **re-checks every publication date on the server**, merges duplicate and syndicated articles, and returns event cards with sources, publication dates and explicit warnings. One click on *Analizza questo evento* creates a private event and runs the market analysis — no typing the news by hand. Sources published within two days are labelled *of the time*; later reconstructions are labelled as such, because they may contain hindsight. URLs and dates always come from the search results: an optional language model may only group and describe them. The search is never exhaustive: the page speaks of events *found in the sources consulted*.
+
 ### Analyses you can reopen and share
 
 Every analysis is saved with the method version and a snapshot of the event, so **reopening it shows exactly the same result**. Market, view, window, horizon and selected precedents live in the URL. Jobs keep running on the server if the page is reloaded.
@@ -198,7 +202,9 @@ Copy `.env.example` to `.env`. Every variable is optional.
 | `LIA_COOKIE_SECURE`   | `true`                   | Set `false` only for local development over plain HTTP            |
 | `LIA_PROXY_HOPS`      | `0`                      | Trusted reverse proxies (Railway: `1`)                            |
 | `LIA_CANONICAL_HOST`  | —                        | Redirect `www.<host>` to this host                                |
-| `DEEPSEEK_API_KEY`    | —                        | Enables the AI summary (paid), together with the password hash    |
+| `PERPLEXITY_API_KEY`  | —                        | Enables the news search by date (paid), with the password hash    |
+| `LIA_NEWS_SEARCH_MAX_USD` | `0.05`               | Cost cap for a single search (searches + optional extraction)     |
+| `DEEPSEEK_API_KEY`    | —                        | Enables the AI summary and the structured event extraction (paid) |
 | `DEEPSEEK_MODEL`      | `deepseek-flash`         | Must have a verified price in `linkedia/services/budget.py`       |
 | `LIA_API_BUDGET_USD`  | `3.00`                   | Global budget for paid calls over the rolling 24-hour window      |
 | `LIA_AI_DAILY_LIMIT`  | `20`                     | Maximum summaries in 24 hours                                     |
