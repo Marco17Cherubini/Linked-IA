@@ -156,7 +156,7 @@ Zona dopo la modifica (nessun record MX o di altri sottodomini esisteva né è s
 
 | Tipo | Nome | Valore | TTL |
 |---|---|---|---|
-| ALIAS (inserito come CNAME @) | @ | 2iq9ad3u.up.railway.app | 300 |
+| ALIAS (inserito come CNAME @) | @ | l2a9bnrd.up.railway.app (prima 2iq9ad3u.up.railway.app: il certificato è rimasto «in emissione» per oltre 3 ore, il dominio è stato rimosso e riaggiunto una volta il 28/10) | 300 |
 | CNAME | www | byepyf29.up.railway.app | 300 |
 | TXT | _railway-verify | railway-verify=… (valore fornito da Railway per il dominio principale) | 300 |
 | TXT | _railway-verify.www | railway-verify=… (valore fornito da Railway per www) | 300 |
