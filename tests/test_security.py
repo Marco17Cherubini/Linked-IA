@@ -158,11 +158,13 @@ def test_every_mutating_api_route_requires_a_session(settings):
              if r.rule.startswith("/api/") and r.methods - {"GET", "HEAD", "OPTIONS"}]
     assert {r.rule for r in rules} == {"/api/auth/login", "/api/auth/logout", "/api/events",
                                        "/api/events/<event_id>/analyses",
-                                       "/api/analyses/<analysis_id>/summary"}
+                                       "/api/analyses/<analysis_id>/summary", "/api/news/searches",
+                                       "/api/news/searches/<search_id>/events/<int:idx>/analyze"}
     for rule in rules:
         if rule.rule == "/api/auth/login":
             continue
-        url = rule.rule.replace("<event_id>", "x").replace("<analysis_id>", "x")
+        url = (rule.rule.replace("<event_id>", "x").replace("<analysis_id>", "x")
+               .replace("<search_id>", "x").replace("<int:idx>", "0"))
         assert client.post(url, json={}, headers={"Origin": ORIGIN}).status_code == 401, url
 
 
@@ -201,7 +203,8 @@ def test_missing_password_hash_disables_reserved_features(settings):
     client = client_for(make_app(settings, market_data=market, llm=llm, deepseek_api_key="k",
                                  operator_password_hash=None))
     meta = client.get("/api/meta").get_json()
-    assert meta["features"] == {"create": False, "ai_summary": False, "login": False}
+    assert meta["features"] == {"create": False, "ai_summary": False, "login": False,
+                                "news_search": False}
     assert login(client).status_code == 503
     r = client.post("/api/events", json=event_payload(), headers={"Origin": ORIGIN})
     assert r.status_code == 503 and market.calls == 0 and llm.calls == 0

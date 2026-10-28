@@ -25,9 +25,10 @@ from ..errors import (
     RetryLater,
     Unauthorized,
 )
-from ..providers.llm import BilledResponseError, LLMClient
+from ..providers.llm import LLMClient
 from ..storage.store import Store, utc_now
 from .budget import BudgetService, actual_cost_micros, max_cost_micros, price_for
+from .paid_calls import run_paid
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,6 @@ MAX_OUTPUT_TOKENS = 900
 MAX_PROMPT_BYTES = 48_000
 # Tentativi complessivi per sintesi: si ripete solo se il precedente è certamente non fatturato.
 MAX_ATTEMPTS = 2
-RETRY_DELAY_SECONDS = 2.0
 
 SYSTEM_PROMPT = """Sei un analista che commenta dati di mercato già calcolati.
 Regole vincolanti:
@@ -193,35 +193,13 @@ class SummaryService:
 
     def _call(self, client: LLMClient, price, prompt: str, summary_id: str) -> tuple[dict, dict | None]:
         """Ogni tentativo prenota la propria riserva prima di partire e la riconcilia dopo."""
-        reserve = self._max_cost(prompt)
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            entry = self.budget.reserve(provider=client.provider, model=client.model,
-                                        purpose="summary", ref_id=summary_id, amount=reserve,
-                                        attempt=attempt)
-            try:
-                text, usage = client.chat(SYSTEM_PROMPT, prompt, max_tokens=MAX_OUTPUT_TOKENS)
-            except BilledResponseError as exc:
-                self.budget.confirm(entry, reserved=reserve, usage=exc.usage,
-                                    actual=actual_cost_micros(price, exc.usage) if exc.usage else None)
-                raise
-            except ProviderUnavailable as exc:
-                if exc.billing != "not_billed":
-                    # Esito sconosciuto: la riserva resta impegnata e non si ripete la chiamata.
-                    self.budget.mark_uncertain(entry, f"esito incerto: {exc.code}")
-                    raise
-                self.budget.release(entry, f"non fatturata: {exc.code}")
-                if attempt == MAX_ATTEMPTS:
-                    raise
-                log.info("Sintesi %s: nuovo tentativo dopo un errore non fatturato", summary_id)
-                self.sleep(RETRY_DELAY_SECONDS)
-                continue
-            except BaseException:
-                self.budget.mark_uncertain(entry, "errore inatteso durante la chiamata")
-                raise
-            self.budget.confirm(entry, reserved=reserve, usage=usage,
-                                actual=actual_cost_micros(price, usage) if usage else None)
-            return parse_summary(text), usage
-        raise AssertionError("unreachable")
+        text, usage = run_paid(
+            self.budget, provider=client.provider, model=client.model, purpose="summary",
+            ref_id=summary_id, amount=self._max_cost(prompt),
+            call=lambda: _with_usage(client.chat(SYSTEM_PROMPT, prompt, max_tokens=MAX_OUTPUT_TOKENS)),
+            cost_of=lambda usage: actual_cost_micros(price, usage) if usage else None,
+            attempts=MAX_ATTEMPTS, sleep=self.sleep)
+        return parse_summary(text), usage
 
     def run(self, summary_id: str, analysis_id: str, session_id: str = "") -> None:
         self.store.update_summary(summary_id, status="running")
@@ -242,3 +220,8 @@ class SummaryService:
             return
         self.store.update_summary(summary_id, status="succeeded", finished_at=utc_now(),
                                   model=client.model, content=content, usage=usage)
+
+
+def _with_usage(response: tuple[str, dict | None]) -> tuple[tuple[str, dict | None], dict | None]:
+    """Il valore restituito conserva anche l'utilizzo, che viene salvato con la sintesi."""
+    return response, response[1]

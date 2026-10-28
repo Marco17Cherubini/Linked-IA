@@ -57,8 +57,9 @@ class AnalysisService:
             self.store.upsert_event(event)
         return len(events)
 
-    def create_event(self, payload: dict, *, session_id: str | None = None) -> tuple[Event, str]:
-        event, errors = parse_event(payload, origin="user")
+    def create_event(self, payload: dict, *, session_id: str | None = None,
+                     origin: str = "user") -> tuple[Event, str]:
+        event, errors = parse_event(payload, origin=origin)
         if errors:
             raise InvalidInput("Dati dell'evento non validi: " + "; ".join(errors))
         if event.occurred_on > self._today():

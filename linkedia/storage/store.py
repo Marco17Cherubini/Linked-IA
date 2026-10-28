@@ -20,7 +20,7 @@ from ..domain.events import Event, Source
 from ..domain.sessions import PriceBar
 from ..errors import NotFound, PersistenceError
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -119,6 +119,37 @@ CREATE TABLE IF NOT EXISTS spend_ledger (
 );
 CREATE INDEX IF NOT EXISTS spend_by_time ON spend_ledger(created_at);
 CREATE TABLE IF NOT EXISTS budget_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS news_searches (
+    id TEXT PRIMARY KEY,
+    params TEXT NOT NULL,
+    cache_key TEXT NOT NULL,
+    normalization_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    stage TEXT,
+    requests TEXT,
+    warnings TEXT,
+    excluded TEXT,
+    error_code TEXT,
+    error_message TEXT,
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    finished_at TEXT
+);
+CREATE INDEX IF NOT EXISTS news_searches_by_key ON news_searches(cache_key, created_at);
+CREATE TABLE IF NOT EXISTS news_results (
+    search_id TEXT NOT NULL REFERENCES news_searches(id) ON DELETE CASCADE,
+    idx INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    PRIMARY KEY (search_id, idx)
+);
+CREATE TABLE IF NOT EXISTS news_events (
+    search_id TEXT NOT NULL REFERENCES news_searches(id) ON DELETE CASCADE,
+    idx INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    event_id TEXT,
+    analysis_id TEXT,
+    PRIMARY KEY (search_id, idx)
+);
 """
 
 # Importo che una voce di spesa impegna nel budget: il costo confermato quando noto,
@@ -150,6 +181,7 @@ def _event_from_rows(row: sqlite3.Row, sources: list[sqlite3.Row]) -> Event:
             Source(
                 url=s["url"], publisher=s["publisher"], title=s["title"], kind=s["kind"],
                 accessed_on=date.fromisoformat(s["accessed_on"]) if s["accessed_on"] else None,
+                published_on=date.fromisoformat(s["published_on"]) if s["published_on"] else None,
             )
             for s in sources
         ),
@@ -199,6 +231,9 @@ class Store:
                 # Migrazione da v1: il catalogo curato era già l'insieme dei casi dimostrativi;
                 # gli eventi inseriti dagli utenti restano privati.
                 conn.execute("UPDATE events SET public = 1 WHERE origin = 'curated'")
+            source_columns = {r["name"] for r in conn.execute("PRAGMA table_info(sources)")}
+            if "published_on" not in source_columns:
+                conn.execute("ALTER TABLE sources ADD COLUMN published_on TEXT")
             if row is None:
                 conn.execute("INSERT INTO meta(key, value) VALUES ('schema_version', ?)",
                              (str(SCHEMA_VERSION),))
@@ -240,9 +275,11 @@ class Store:
             )
             conn.execute("DELETE FROM sources WHERE event_id = ?", (event.id,))
             conn.executemany(
-                "INSERT INTO sources VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO sources (event_id, position, url, publisher, title, kind, accessed_on, "
+                "published_on) VALUES (?,?,?,?,?,?,?,?)",
                 [(event.id, i, s.url, s.publisher, s.title, s.kind,
-                  s.accessed_on.isoformat() if s.accessed_on else None)
+                  s.accessed_on.isoformat() if s.accessed_on else None,
+                  s.published_on.isoformat() if s.published_on else None)
                  for i, s in enumerate(event.sources)],
             )
 
@@ -326,7 +363,9 @@ class Store:
             "SELECT COUNT(*) FROM analyses WHERE status IN ('queued','running')").fetchone()[0]
         summaries = conn.execute(
             "SELECT COUNT(*) FROM summaries WHERE status IN ('queued','running')").fetchone()[0]
-        return analyses + summaries
+        searches = conn.execute(
+            "SELECT COUNT(*) FROM news_searches WHERE status IN ('queued','running')").fetchone()[0]
+        return analyses + summaries + searches
 
     def active_job_count(self) -> int:
         with self.connect() as conn:
@@ -379,6 +418,11 @@ class Store:
             n += conn.execute(
                 "UPDATE summaries SET status='failed', finished_at=?, error_code='interrupted', "
                 "error_message=? WHERE status IN ('queued','running')", (utc_now(), message),
+            ).rowcount
+            n += conn.execute(
+                "UPDATE news_searches SET status='failed', finished_at=?, error_code='interrupted', "
+                "error_message='Ricerca interrotta da un riavvio del server: avviarla di nuovo.' "
+                "WHERE status IN ('queued','running')", (utc_now(),),
             ).rowcount
         return n
 

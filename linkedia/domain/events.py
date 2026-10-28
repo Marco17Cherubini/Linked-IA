@@ -34,6 +34,8 @@ class Source:
     title: str
     kind: str = "reference"  # reference | official | news
     accessed_on: date | None = None
+    # Data di pubblicazione dichiarata dalla fonte (diversa da quella dell'evento e dell'accesso).
+    published_on: date | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -42,6 +44,7 @@ class Source:
             "title": self.title,
             "kind": self.kind,
             "accessed_on": self.accessed_on.isoformat() if self.accessed_on else None,
+            "published_on": self.published_on.isoformat() if self.published_on else None,
         }
 
 
@@ -56,7 +59,7 @@ class Event:
     occurred_at: datetime | None = None  # sempre con fuso quando presente
     time_precision: str = "unknown"
     sources: tuple[Source, ...] = field(default_factory=tuple)
-    origin: str = "curated"  # curated | user
+    origin: str = "curated"  # curated | user | search
     # Solo i casi marcati esplicitamente come pubblici sono visibili senza accesso.
     public: bool = False
 
@@ -162,12 +165,17 @@ def parse_event(data: dict, *, origin: str = "curated") -> tuple[Event | None, l
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 errors.append(f"fonte {i}: URL non valido")
                 continue
-            accessed_on = None
+            accessed_on = published_on = None
             if src.get("accessed_on"):
                 try:
                     accessed_on = date.fromisoformat(str(src["accessed_on"]))
                 except ValueError:
                     errors.append(f"fonte {i}: 'accessed_on' non valido")
+            if src.get("published_on"):
+                try:
+                    published_on = date.fromisoformat(str(src["published_on"]))
+                except ValueError:
+                    errors.append(f"fonte {i}: 'published_on' non valido")
             kind = src.get("kind", "reference")
             if kind not in {"reference", "official", "news"}:
                 errors.append(f"fonte {i}: 'kind' non valido")
@@ -178,6 +186,7 @@ def parse_event(data: dict, *, origin: str = "curated") -> tuple[Event | None, l
                     title=str(src.get("title") or url)[:200],
                     kind=kind,
                     accessed_on=accessed_on,
+                    published_on=published_on,
                 )
             )
 

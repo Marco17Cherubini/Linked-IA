@@ -43,7 +43,7 @@ def test_backup_is_a_consistent_copy(settings, monkeypatch, tmp_path):
     assert cli.main(["backup", "--dir", str(tmp_path / "bk")]) == 0
     [copy] = list((tmp_path / "bk").glob("lia-*.sqlite3"))
     with sqlite3.connect(copy) as conn:
-        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "2"
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "3"
 
 
 def test_init_does_not_download_when_public_cases_exist(settings, monkeypatch):

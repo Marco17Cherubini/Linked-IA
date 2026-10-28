@@ -48,7 +48,9 @@ class FakeLLM:
 
     def chat(self, system, user, *, max_tokens):
         self.calls += 1
-        assert "probabilità" in system  # il prompt vieta di presentare frequenze come probabilità
+        if "commenta dati di mercato" in system:
+            assert "probabilità" in system  # il prompt vieta di presentare frequenze come probabilità
+        self.last_user = user
         item = self.script.pop(0) if len(self.script) > 1 else self.script[0]
         if isinstance(item, Exception):
             raise item
@@ -66,12 +68,14 @@ class Clock:
         self.now += timedelta(**delta)
 
 
-def make_app(settings, market_data=None, llm=None, clock=None, store=None, **overrides):
+def make_app(settings, market_data=None, llm=None, clock=None, store=None, search=None, **overrides):
     if overrides:
         settings = Settings(**{**settings.__dict__, **overrides})
     app = create_app(settings, market_data=market_data or FakeMarketData(), runner=InlineRunner(),
-                     llm_factory=(lambda: llm) if llm else None, clock=clock, store=store)
+                     llm_factory=(lambda: llm) if llm else None,
+                     search_factory=(lambda: search) if search else None, clock=clock, store=store)
     app.extensions["lia"]["summary"].sleep = lambda seconds: None
+    app.extensions["lia"]["news"].sleep = lambda seconds: None
     return app
 
 

@@ -139,7 +139,7 @@ def meta():
         "categories": [{"id": k, "label": v} for k, v in CATEGORIES.items()],
         "precedent_criteria": criteria(),
         "features": {"create": settings.creation_enabled, "ai_summary": settings.ai_enabled,
-                     "login": settings.auth_configured},
+                     "login": settings.auth_configured, "news_search": settings.news_search_enabled},
         "featured_event_id": settings.featured_event_id,
         "legal": {"controller_name": settings.controller_name,
                   "controller_email": settings.controller_email,

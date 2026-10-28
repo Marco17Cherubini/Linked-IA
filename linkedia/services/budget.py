@@ -32,12 +32,13 @@ PROMPT_TOKEN_OVERHEAD = 64
 
 @dataclass(frozen=True)
 class Price:
-    """Prezzi in micro-USD per milione di token."""
+    """Prezzi in micro-USD: per milione di token e, se presente, per richiesta."""
 
     input_cache_miss: int
     input_cache_hit: int
     output: int
     verified_on: str
+    per_request: int = 0
 
 
 # Tariffe di picco (le più alte) pubblicate su https://api-docs.deepseek.com/quick_start/pricing,
@@ -46,6 +47,9 @@ class Price:
 PRICING: dict[tuple[str, str], Price] = {
     ("deepseek", "deepseek-flash"): Price(300_000, 6_000, 1_200_000, "2026-10-28"),
     ("deepseek", "deepseek-v4-pro"): Price(1_320_000, 44_000, 3_960_000, "2026-10-28"),
+    # Search API: 5 USD ogni 1.000 richieste riuscite, nessun costo a token; una richiesta può
+    # contenere fino a 5 query (https://docs.perplexity.ai/getting-started/pricing).
+    ("perplexity", "search"): Price(0, 0, 0, "2026-10-28", per_request=5_000),
 }
 
 
@@ -61,7 +65,7 @@ def _cost(tokens: int, price_per_million: int) -> int:
 def max_cost_micros(price: Price, *, prompt_bytes: int, max_output_tokens: int) -> int:
     """Tetto prudenziale: ogni token copre almeno un byte UTF-8, quindi i token in ingresso
     non superano i byte inviati (più un margine fisso); l'uscita è limitata da max_tokens."""
-    return (_cost(prompt_bytes + PROMPT_TOKEN_OVERHEAD, price.input_cache_miss)
+    return (price.per_request + _cost(prompt_bytes + PROMPT_TOKEN_OVERHEAD, price.input_cache_miss)
             + _cost(max_output_tokens, price.output))
 
 
@@ -82,7 +86,7 @@ def actual_cost_micros(price: Price, usage: dict) -> int | None:
     details = usage.get("completion_tokens_details") or {}
     reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
     reasoning = reasoning if isinstance(reasoning, int) and reasoning > 0 else 0
-    return input_cost + _cost(completion + reasoning, price.output)
+    return price.per_request + input_cost + _cost(completion + reasoning, price.output)
 
 
 def _iso(moment: datetime) -> str:

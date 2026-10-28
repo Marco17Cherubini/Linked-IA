@@ -11,15 +11,18 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from ..config import Settings, configure_logging
-from ..errors import LiaError, RetryLater
+from ..errors import ConfigurationError, LiaError, RetryLater
 from ..providers.llm import DeepSeekClient
 from ..providers.market_data import YahooChartProvider
+from ..providers.news_search import PerplexitySearchClient
 from ..services.analysis import AnalysisService
 from ..services.auth import AuthService
 from ..services.budget import BudgetService
 from ..services.jobs import BackgroundRunner
+from ..services.news import NewsSearchService
 from ..services.summary import SummaryService
 from ..storage.store import Store
+from .news_routes import news_api
 from .routes import api
 
 log = logging.getLogger(__name__)
@@ -40,7 +43,8 @@ SECURITY_HEADERS = {
 
 
 def create_app(settings: Settings | None = None, *, store: Store | None = None,
-               market_data=None, runner=None, llm_factory=None, clock=None) -> Flask:
+               market_data=None, runner=None, llm_factory=None, search_factory=None,
+               clock=None) -> Flask:
     settings = settings or Settings.from_env()
     configure_logging(settings.log_level)
     if os.environ.get("LIA_ADMIN_TOKEN"):
@@ -66,6 +70,11 @@ def create_app(settings: Settings | None = None, *, store: Store | None = None,
         def llm_factory():
             return DeepSeekClient(settings.require_deepseek_key(), base_url=settings.deepseek_base_url,
                                   model=settings.deepseek_model)
+    if search_factory is None:
+        def search_factory():
+            if not settings.perplexity_api_key:
+                raise ConfigurationError("Ricerca automatica non configurata", code="provider_not_configured")
+            return PerplexitySearchClient(settings.perplexity_api_key, base_url=settings.perplexity_base_url)
 
     app = Flask(__name__, static_folder=None)
     app.json.sort_keys = False
@@ -74,16 +83,24 @@ def create_app(settings: Settings | None = None, *, store: Store | None = None,
         # Railway: un proxy davanti all'app. Si considerano solo le intestazioni che aggiunge.
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=settings.proxy_hops, x_proto=settings.proxy_hops,
                                 x_host=0, x_port=0, x_prefix=0)
+    analysis = AnalysisService(store, market_data, runner, authorize=auth.session_is_valid)
+    news = NewsSearchService(store, settings, runner, budget, analysis, search_factory, llm_factory,
+                             authorize=auth.session_is_valid)
+    purged = news.purge()
+    if purged:
+        log.info("%s ricerche di notizie oltre il periodo di conservazione eliminate", purged)
     app.extensions["lia"] = {
         "settings": settings,
         "store": store,
         "auth": auth,
         "budget": budget,
-        "analysis": AnalysisService(store, market_data, runner, authorize=auth.session_is_valid),
+        "analysis": analysis,
+        "news": news,
         "summary": SummaryService(store, settings, runner, llm_factory, budget,
                                   authorize=auth.session_is_valid),
     }
     app.register_blueprint(api, url_prefix="/api")
+    app.register_blueprint(news_api, url_prefix="/api/news")
 
     @app.before_request
     def canonical_host():

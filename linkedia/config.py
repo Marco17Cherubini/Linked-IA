@@ -79,6 +79,11 @@ class Settings:
     # Dati del titolare mostrati nell'informativa privacy (nessun valore predefinito).
     controller_name: str | None = None
     controller_email: str | None = None
+    # Ricerca automatica delle notizie (Perplexity Search API).
+    perplexity_api_key: str | None = field(default=None, repr=False)
+    perplexity_base_url: str = "https://api.perplexity.ai"
+    # Tetto di costo per singola ricerca (richieste di ricerca + estrazione), in micro-USD.
+    news_search_max_micros: int = 50_000
 
     @classmethod
     def from_env(cls, *, load_dotenv_file: bool = True) -> Settings:
@@ -118,6 +123,9 @@ class Settings:
             debug=_env_bool("LIA_DEBUG"),
             controller_name=os.environ.get("LIA_CONTROLLER_NAME", "").strip() or None,
             controller_email=os.environ.get("LIA_CONTROLLER_EMAIL", "").strip() or None,
+            perplexity_api_key=os.environ.get("PERPLEXITY_API_KEY", "").strip() or None,
+            perplexity_base_url=os.environ.get("PERPLEXITY_BASE_URL", "https://api.perplexity.ai").rstrip("/"),
+            news_search_max_micros=_env_usd_micros("LIA_NEWS_SEARCH_MAX_USD", 50_000),
         )
 
     @property
@@ -134,6 +142,10 @@ class Settings:
 
         return (self.deepseek_api_key is not None and self.auth_configured
                 and price_for("deepseek", self.deepseek_model) is not None)
+
+    @property
+    def news_search_enabled(self) -> bool:
+        return self.perplexity_api_key is not None and self.auth_configured
 
     def require_deepseek_key(self) -> str:
         if not self.deepseek_api_key:

@@ -37,7 +37,7 @@ def test_meta_and_health(client):
     assert health.get_json() == {"status": "ok"}  # nessuna versione o dettaglio interno
     meta = client.get("/api/meta").get_json()
     assert [m["id"] for m in meta["markets"]] == list(MARKETS)
-    assert meta["features"] == {"create": True, "ai_summary": False, "login": True}
+    assert meta["features"] == {"create": True, "ai_summary": False, "login": True, "news_search": False}
     assert "operator_password_hash" not in str(meta)
 
 
