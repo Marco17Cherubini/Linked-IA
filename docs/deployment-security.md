@@ -138,9 +138,29 @@ I nameserver autorevoli sono quelli di Hostinger. Si modificano solo i record ri
 - Ripristino da copia locale: fermare il servizio, sostituire `/data/lia.sqlite3` con la copia (e rimuovere `-wal`/`-shm`), riavviare.
 - Un rollback del codice non ripristina i dati: lo schema v2 resta compatibile in avanti; tornare a una versione precedente alla v2 richiede di ripristinare anche un backup precedente alla migrazione.
 
-## 9. Registro delle operazioni di pubblicazione
+## 9. Registro delle operazioni di pubblicazione (28 ottobre 2026)
 
-Compilato durante la pubblicazione (vedi sotto).
+**Railway** — progetto `LiA` (`42a8dd60-5098-48ab-860c-58e1e6bba85f`), ambiente `production`, servizio `lia-web` (`409f5cc9-ab9d-4b42-84a4-4256ec955eef`), regione `europe-west4-drams3a`, volume `lia-data` (5 GB) su `/data`, dominio tecnico `lia-web-production-cb95.up.railway.app`. Nessuna modifica ai progetti Lev Space, Lev Space.it, Ellebi-Service.
+
+**DNS Hostinger** (nameserver `cosmos.dns-parking.com`, `nova.dns-parking.com`, invariati). Zona prima della modifica:
+
+| Tipo | Nome | Valore | TTL |
+|---|---|---|---|
+| A | @ | 2.57.91.91 (parcheggio Hostinger) | 50 |
+| CNAME | www | linked-intelligent-analyst.it | 300 |
+
+Zona dopo la modifica (nessun record MX o di altri sottodomini esisteva né è stato toccato):
+
+| Tipo | Nome | Valore | TTL |
+|---|---|---|---|
+| ALIAS (inserito come CNAME @) | @ | 2iq9ad3u.up.railway.app | 300 |
+| CNAME | www | byepyf29.up.railway.app | 300 |
+| TXT | _railway-verify | railway-verify=… (valore fornito da Railway per il dominio principale) | 300 |
+| TXT | _railway-verify.www | railway-verify=… (valore fornito da Railway per www) | 300 |
+
+L'`A @` di parcheggio è stato rimosso perché Hostinger non consente un ALIAS insieme a un record A sullo stesso nome. Ripristino: eliminare l'ALIAS e ricreare `A @ 2.57.91.91`, riportare `www` a `linked-intelligent-analyst.it`.
+
+Il dominio `www` è servito dallo stesso servizio; l'applicazione risponde con 301 verso `https://linked-intelligent-analyst.it` mantenendo percorso e query.
 
 ## 10. Piano dei task
 

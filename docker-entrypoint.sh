@@ -8,6 +8,7 @@ DATA_DIR="$(dirname "${LIA_DATABASE_PATH:-/data/lia.sqlite3}")"
 if [ "$(id -u)" = "0" ]; then
     mkdir -p "$DATA_DIR"
     chown -R lia:lia "$DATA_DIR"
+    export HOME=/home/lia
     exec setpriv --reuid=lia --regid=lia --init-groups "$0" "$@"
 fi
 
