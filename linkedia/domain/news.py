@@ -29,7 +29,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from .events import CATEGORIES
 
-NORMALIZATION_VERSION = "news-v2"
+NORMALIZATION_VERSION = "news-v3"
 MODES = ("auto", "contemporary", "retrospective")
 MAX_RANGE_DAYS = 7
 CONTEMPORARY_LAG_DAYS = 2
@@ -43,7 +43,9 @@ CLUSTER_SIMILARITY = 0.5
 # Due risultati descrivono lo stesso fatto se condividono abbastanza termini distintivi (nomi di
 # persone, aziende, Paesi), esclusi quelli generici del linguaggio di mercato.
 SHARED_TERMS_MIN = 3
-SHARED_TERMS_OVERLAP = 0.4
+# Tarata sulle ricerche reali del 28/10/2026: titolo ed estratto hanno in media 24 termini
+# distintivi, e articoli diversi sullo stesso fatto ne condividono circa un quinto.
+SHARED_TERMS_OVERLAP = 0.2
 LANGUAGES = ("en", "it")
 MIN_LATIN_SHARE = 0.6
 
@@ -79,7 +81,8 @@ _GENERIC = frozenset(
 _INDEX_PAGE = re.compile(
     r"\b(on this day|this day in history|today in history|what happened on|headlines for|"
     r"top news|current events|daily (business )?briefing|news (summary|roundup|round-up)|"
-    r"timeline|cronologia|accadde oggi|pagina \d+|page \d+)\b", re.I)
+    r"timeline|cronologia|accadde oggi|pagina \d+|page \d+|latest news|ultime notizie|"
+    r"year in review|un anno di notizie|birthday|born on|horoscope|oroscopo)\b", re.I)
 
 _CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "geopolitical_conflict": ("war", "invasion", "invade", "military", "missile", "troops", "attack",
@@ -373,7 +376,9 @@ def _latin_share(text: str) -> float:
 
 def _is_date_only(title: str) -> bool:
     """Titoli come «24 Febbraio 2022»: pagine di archivio di un giorno, non articoli."""
-    words = [t for t in _TOKEN.findall(title.lower()) if not t.isdigit()]
+    # Si ignora il nome della testata dopo « - » o « | ».
+    head = re.split(r"\s[-|–]\s", title, maxsplit=1)[0]
+    words = [t for t in _TOKEN.findall(head.lower()) if not t.isdigit()]
     return len([w for w in words if w not in _GENERIC and w not in _STOPWORDS]) == 0
 
 

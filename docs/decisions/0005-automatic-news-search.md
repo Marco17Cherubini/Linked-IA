@@ -66,7 +66,7 @@ Insuccessi e limiti osservati:
 
 ### Correzioni dopo la verifica (regole `news-v2`)
 
-- Raggruppamento: oltre ai titoli simili, si collegano i risultati che condividono almeno 3 termini distintivi di titolo ed estratto (nomi di persone, aziende, Paesi), escluso il lessico generico di mercato e di calendario.
+- Raggruppamento: oltre ai titoli simili, si collegano i risultati che condividono almeno 3 termini distintivi di titolo ed estratto (nomi di persone, aziende, Paesi), escluso il lessico generico di mercato e di calendario, se i termini condivisi sono almeno il 20 % di quelli del risultato più breve (`news-v3`: con il 40 % di `news-v2` sui dati reali non si formava alcun gruppo).
 - Pagine indice e cronologie («On this day», «Headlines for…», «Pagina N», titoli fatti solo di una data) escluse con motivo `index_page`.
 - Lingua: filtro `search_language_filter` (inglese, italiano) nella richiesta e controllo lato server dei titoli in alfabeti non latini (`other_language`).
 - Categoria: parole chiave solo come parole intere, titoli con peso triplo, voto dell'intero gruppo, vantaggio alla categoria scelta come filtro.

@@ -461,6 +461,7 @@ def _accept(raw, kind="contemporary", params=None, idx=0):
     "What Happened on September 15, 2008", "On This Day in History - September 15",
     "Top news by an agency | Pagina 22", "Headlines for February 24, 2022", "24 Febbraio 2022",
     "Portal:Current events/2008 September 15", "Timeline: the crisis as it happened",
+    "24 Febbraio 2022 - Una testata", "Latest News", "Birthday Analysis for September 15, 2008",
 ])
 def test_index_pages_are_not_events(title):
     result, reason = _accept(article("https://x.org/a", title, "2008-09-15"), kind="retrospective")
