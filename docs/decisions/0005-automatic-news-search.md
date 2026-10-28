@@ -42,3 +42,24 @@ Il refactoring del 26 ottobre (commit `d0d6ad0`) ha rimosso `fetcher.py`, `scrap
 - Servono `PERPLEXITY_API_KEY` (obbligatoria per la ricerca) e, facoltativamente, `DEEPSEEK_API_KEY` per l'estrazione strutturata.
 - Il budget globale (3 USD su 24 ore) ora copre ricerca, estrazione e sintesi.
 - I test automatici usano provider finti; la qualità reale va misurata con poche ricerche controllate (vedi `docs/deployment-security.md`).
+
+## Verifica reale (28 ottobre 2026, produzione)
+
+Due ricerche controllate dalla sessione dell'operatore, modalità `auto`, senza estrazione IA (DeepSeek non configurato). Costo confermato complessivo: **0,020 USD** (4 richieste da 0,005 USD, nessuna incerta).
+
+| Misura | Lehman, 15/09/2008 | Ucraina, 24/02/2022 |
+|---|---|---|
+| Latenza (avvio → schede) | 4,3 s | 4,2 s |
+| Risultati (dell'epoca + successivi) | 16 (8 + 8) | 16 (8 + 8) |
+| Esclusi dal controllo temporale | 0 | 0 |
+| Fonti dell'epoca con data nella finestra | 8/8 (15–17/09/2008) | 8/8 (24–26/02/2022) |
+| Risultati pertinenti (citano l'evento) | 12/16 | 12/16 |
+| Schede evento | 16 | 14 |
+
+Esito positivo: le date di pubblicazione delle fonti dell'epoca sono coerenti e il filtro del provider è stato rispettato. L'evento «Stocks Close Higher on Fed, Lehman and AIG» (CNBC) è stato analizzato senza inserimento manuale: seduta base 12/09/2008, S&P 500 −4,71 % alla prima seduta, evento privato (404 senza sessione).
+
+Insuccessi e limiti osservati:
+- **Raggruppamento insufficiente**: titoli diversi sulla stessa notizia restano schede separate (16 schede per una giornata dominata da Lehman/AIG), con «una sola fonte indipendente» su quasi tutte. La somiglianza dei soli titoli non basta; l'estrazione strutturata con il modello o un raggruppamento su entità condivise sono necessari.
+- **Pagine indice tra le retrospettive** («On this day», «Headlines for…», «Top news … Pagina 22»): non sono eventi, e la loro data di pubblicazione dichiarata coincide spesso con la data cercata, quindi non è attendibile.
+- **Lingue miste** tra le fonti dell'epoca (giapponese, cinese, hindi da investing.com): manca un filtro di lingua.
+- **Categorie da parole chiave imprecise** («energy» per un articolo sui mercati asiatici, «pandemic» per uno sull'Ucraina), con effetto sui precedenti: l'analisi Lehman ha 0 precedenti perché la scheda è stata classificata «monetary_policy».
